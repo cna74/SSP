@@ -1,193 +1,259 @@
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from telegram.error import BadRequest
-import matplotlib.pyplot as plt
+from telegram.ext import Updater, MessageHandler, Filters
 from PIL import Image
 import telegram
-import logging
+import datetime
 import sqlite3
+import pytz
 import time
 import re
 
-updater = Updater("Token")
-robot = telegram.Bot("Token")
+TOKEN = '354237673:AAEqjI0X33Ji3SnaO3y8bT_guZvhhvMyVGQ'
 
-hour = (203000, 213000, 223000, 233000, 3000, 13000, 23000, 33000, 43000, 53000, 63000, 73000, 83000,
-        93000, 103000, 113000, 123000, 133000, 143000, 153000, 163000, 173000, 183000, 193000)
-
-gp_channel, channel = 'group', '@crazy_mind3'
+# region vars
+updater = Updater(TOKEN)
+robot = telegram.Bot(TOKEN)
+db_connect = sqlite3.connect(database='bot_db.db', check_same_thread=False)
+cursor = db_connect.cursor()
+day = tuple(range(0, 6000, 1200))
+kind, text, edited, sent, ch_a = 1, 3, 6, 7, 8
+channel = '@crazymind3'
+# endregion
 
 
 def current_time():
-    return int(str(time.gmtime()[3]).zfill(2) + str(time.gmtime()[4]).zfill(2) + str(time.gmtime()[5]).zfill(2))
+    utc = pytz.utc
+    u = time.gmtime()
+    utc_dt = datetime.datetime(u[0], u[1], u[2], u[3], u[4], u[5], tzinfo=utc)
+    eastern = pytz.timezone('Asia/Tehran')
+    loc_dt = utc_dt.astimezone(eastern)
+    fmt = '%H%M%S'
+    return loc_dt.strftime(fmt)
 
 
-def current_date():
-    return int(str(time.gmtime()[0])[-2:]+str(time.strftime('%m'))+str(time.strftime('%d')))
-
-
-def current_mood():
-    x = current_time()
-    if 203000 <= x < 235900 or 0 <= x < 13000:
-        return 900
-    elif 130 <= x < 53000:
-        return 3600
-    else:
-        return 600
-        
-
-def id_remove(text):
-    pattern = re.compile(r'(@[a-z0-9_]*)', re.I)
-    if re.search(pattern, text):
-        state = re.findall(pattern, text)
+def id_remove(entry):
+    pattern = re.compile(r'(@\S+)', re.I)
+    if re.search(pattern, entry):
+        state = re.findall(pattern, entry)
         for state in state:
-            if state == '@crazy_mind3' or state == '@crazy_miind3' or state == '@mmd_bt':
-                continue
-            text = re.sub(state, '', text)
-        return text
+            if not state.lower() in ('@crazymind3', '@crazy_miind3', '@mmd_bt'):
+                entry = re.sub(state, '', entry)
+        return entry
     else:
-        return text
+        return entry + '\n@CrazyMind3'
 
 
-def echo(bot, update):
-    if str(update.message.chat.id) == gp_channel:
-        if str(update.message.text).startswith('.'):
-            pass
-        else:
-            caption = id_remove(text=update.message.text)
-            bot.send_message(chat_id=channel, text=caption + '\n' + '@Crazy_mind3')
-
-            time.sleep(current_mood())
-
-
-def put(coor):
-    lg = Image.open('CC.png')
-    bg = Image.open('tmp.jpg')
-    res = bg.size
-    lg_sz = lg.size
-    deaf_l, deaf_p, box_deaf = (1920, 1080), (1080, 1920), (2000, 2000)
-
-    if res[0] > res[1]:
-        if not res[0] == deaf_l[0] and not res[1] == deaf_l[1]:
-            n_deaf = [int((lg_sz[0] * res[0]) / deaf_l[0]), int((lg_sz[1] * res[1]) / deaf_l[1])]
-            if res[0] > deaf_l[0] or res[1] > deaf_l[1]:
-                print(res, 'HIGH RESOLUTION')
-            lg.thumbnail(n_deaf)
-
-    elif res[0] == res[1]:
-        if not res == box_deaf:
-            n_deaf = [int((lg_sz[0] * res[0]) / box_deaf[0]), int((lg_sz[1] * res[1]) / box_deaf[1])]
-            lg.thumbnail(n_deaf)
-
-    else:
-        if not res[0] == deaf_p[0] and not res[1] == deaf_p[1]:
-            n_deaf = [int((lg_sz[0] * res[0]) / deaf_p[0]), int((lg_sz[1] * res[1]) / deaf_p[1])]
-            if res[0] > deaf_p[0] or res[1] > deaf_p[1]:
-                print(res, 'HIGH RESOLUTION')
-            lg.thumbnail(n_deaf)
-    lg_sz = lg.size
-
-    dict1 = {'nw': (0, 0),
-             'n': (int((res[0] / 2) - (lg_sz[0] / 2)), 0),
-             'nc': (int(res[0] / 2 - lg_sz[0] / 2), 0),
-             'ne': (res[0] - lg_sz[0], 0),
-             'w': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
-             'cw': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
-             'cc': (int(res[0] / 2 - lg_sz[0] / 2), int(res[1] / 2)),
-             'e': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
-             'ce': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
-             'sw': (0, res[1] - lg_sz[1]),
-             's': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
-             'sc': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
-             'se': (res[0] - lg_sz[0], res[1] - lg_sz[1])
-             }
-    if dict1.get(coor):
-        bg.paste(lg, dict1.get(coor), lg)
-        bg.save('output.jpg')
-    else:
-        bg.paste(lg, dict1.get('sw'), lg)
-        bg.save('output.jpg')
-
-
-def photo_send(bot, update):
-    caption = id_remove(text=update.message.caption) if update.message.caption else ' '
-    if not caption.startswith('.') or not update.message.chat_id == gp_channel:
-        (bot.getFile(update.message.photo[-1].file_id)).download('tmp.jpg')
-        pattern = re.compile(r'(coor)(.)?([=:])(.)?([a-z]{1,2})', re.I)
+# 4004
+def put(photo, caption):
+    try:
+        robot.getFile(photo).download('tmp.jpg')
+        pattern = re.compile(r':(\S{1,2}):', re.I)
         coor_pt = re.compile(r'(nw|ne|nc|cw|cc|ce|sw|sc|se|e|n|w|s)', re.I)
         if re.search(pattern, caption):
             i_cor = ''.join(re.findall(pattern, caption)[0]).lower()
-            cor = re.findall(coor_pt, i_cor)[0] if re.findall(coor_pt, i_cor)[0] else 'sw'
-            put(coor=cor)
-            with open('output.jpg', 'rb') as photo:
-                bot.send_photo(chat_id=channel, photo=photo,
-                               caption=re.sub(pattern, '', caption) + '\n@Crazy_mind3')
+            coor = re.findall(coor_pt, i_cor)[0] if re.findall(coor_pt, i_cor)[0] else 'sw'
         else:
-            tel_caption = id_remove(text=caption)
-            put(coor='sw')
-            with open('output.jpg', 'rb') as photo:
-                bot.send_photo(chat_id=channel, photo=photo,
-                               caption=tel_caption + '\n@Crazy_mind3')
-        time.sleep(current_mood())
-    else:
+            coor = 'sw'
+        lg = Image.open('CC.png')
+        bg = Image.open('tmp.jpg')
+        res, lg_sz = bg.size, lg.size
+        deaf_l, deaf_p, box_deaf = (3800, 1000), (1000, 3800), (3200, 3200)
+
+        if res[0] > res[1]:
+            if not res[0] == deaf_l[0] and not res[1] == deaf_l[1]:
+                n_deaf = [int((lg_sz[0] * res[0]) / deaf_l[0]), int((lg_sz[1] * res[1]) / deaf_l[1])]
+                lg.thumbnail(n_deaf)
+
+        elif res[0] == res[1]:
+            if not res == box_deaf:
+                n_deaf = [int((lg_sz[0] * res[0]) / box_deaf[0]), int((lg_sz[1] * res[1]) / box_deaf[1])]
+                lg.thumbnail(n_deaf)
+
+        else:
+            if not res[0] == deaf_p[0] and not res[1] == deaf_p[1]:
+                n_deaf = [int((lg_sz[0] * res[0]) / deaf_p[0]), int((lg_sz[1] * res[1]) / deaf_p[1])]
+                lg.thumbnail(n_deaf)
+        lg_sz = lg.size
+        dict1 = {'nw': (0, 0),
+                 'n': (int((res[0] / 2) - (lg_sz[0] / 2)), 0),
+                 'nc': (int(res[0] / 2 - lg_sz[0] / 2), 0),
+                 'ne': (res[0] - lg_sz[0], 0),
+                 'w': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
+                 'cw': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
+                 'cc': (int(res[0] / 2 - lg_sz[0] / 2), int(res[1] / 2)),
+                 'e': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
+                 'ce': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
+                 'sw': (0, res[1] - lg_sz[1]),
+                 's': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
+                 'sc': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
+                 'se': (res[0] - lg_sz[0], res[1] - lg_sz[1])
+                 }
+
+        if dict1.get(coor):
+            bg.paste(lg, dict1.get(coor), lg)
+            bg.save('out.jpg')
+        else:
+            bg.paste(lg, dict1.get('sw'), lg)
+            bg.save('out.jpg')
+        caption = id_remove(re.sub(':\S{,2}:', '', caption)) if re.search(r':\S{,2}:', caption) else id_remove(caption)
+        return caption
+    except Exception as E:
+        print(4004, E)
+# region DataBase
+
+
+def create_db():
+    try:
+        db_connect.execute("CREATE TABLE IF NOT EXISTS Queue("
+                           "ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
+                           "kind TEXT,"
+                           "file_id TEXT,"
+                           "caption TEXT,"
+                           "gp INTEGER,"
+                           "ch INTEGER,"
+                           "edited INTEGER DEFAULT 0,"
+                           "sent INTEGER DEFAULT 0,"
+                           "ch_a INTEGER DEFAULT 0);")
+        db_connect.commit()
+    except Exception as E:
+        print(E)
+
+
+def insert(kind, file_id, caption, gp):
+    try:
+        cursor.execute("INSERT INTO Queue(kind, file_id, caption, gp, ch_a) VALUES(?,?,?,?,?)",
+                       (kind, file_id, caption, gp, 0))
+        db_connect.commit()
+    except Exception as E:
+        print(E)
+
+
+# 2002
+def db_edit(caption, gp, edited, sent):
+    try:
+        cursor.execute("UPDATE Queue SET edited={0}, sent={1}, caption='{2}' WHERE gp = {3}"
+                       .format(edited, sent, caption, gp))
+        db_connect.commit()
+    except Exception as E:
+        print(2002, E)
+
+
+# 3003
+def db_set(ch, i_d):
+    try:
+        cursor.execute("UPDATE Queue SET ch={0},edited=0,sent=1,ch_a=1 WHERE ID = {1}".format(ch, i_d))
+        db_connect.commit()
+    except Exception as E:
+        print(3003, E)
+
+# endregion
+
+# region bot
+
+
+# 3003
+def save(bot, update):
+    try:
+        um = update.message
+        ue = update.edited_message
+        kind = name = text = file_id = 'none'
+        if ue:
+            gp_id = ue.message_id
+            out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
+            if ue.text and out[ch_a] == 1:
+                text = id_remove(ue.text)
+                robot.edit_message_text(chat_id=channel, message_id=out[5], text=text)
+            elif ue.caption and out[ch_a] == 1:
+                text = id_remove(ue.caption)
+                robot.edit_message_caption(chat_id=channel, message_id=out[5], caption=id_remove(text))
+            elif ue.text:
+                text = id_remove(ue.text)
+                db_edit(caption=text, gp=gp_id, edited=1, sent=0)
+            elif ue.caption:
+                text = id_remove(ue.caption)
+                db_edit(caption=text, gp=gp_id, edited=1, sent=0)
+        elif um:
+            gp_id = um.message_id
+            if um.text:
+                if str(um.text).startswith('.'):
+                    pass
+                else:
+                    text = id_remove(um.text)
+                    kind = 'text'
+                    insert(kind=kind, file_id=file_id, caption=text, gp=gp_id)
+            else:
+                text = id_remove(um.caption) if um.caption else id_remove('')
+                if str(text).startswith('.'):
+                    pass
+                else:
+                    if um.photo:
+                        kind = 'photo'
+                        file_id = um.photo[-1].file_id
+                    elif um.video:
+                        kind = 'video'
+                        file_id = um.video.file_id
+                    elif um.document:
+                        kind = 'document'
+                        file_id = um.document.file_id
+                    elif um.voice:
+                        kind = 'voice'
+                        file_id = um.voice.file_id
+                    elif um.audio:
+                        kind = 'audio'
+                        file_id = um.audio.file_id
+                    elif um.video_note:
+                        kind = 'v_note'
+                        file_id = um.video_note.file_id
+                    insert(kind=kind, file_id=file_id, caption=text, gp=gp_id)
+    except Exception as E:
+        print(3003, E)
+
+
+# 1001
+def send_to_ch():
+    try:
+        out = [i for i in cursor.execute("SELECT * FROM Queue WHERE sent=0 ORDER BY ID LIMIT 1")][0]
+        if out[edited] == 1 and out[sent] == 0 and out[ch_a] == 1:
+            if out[kind] == 'text':
+                robot.edit_message_text(chat_id=channel, text=out[text], message_id=out[5])
+                cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
+                db_connect.commit()
+            else:
+                robot.edit_message_caption(chat_id=channel, caption=out[text], message_id=out[5])
+                cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
+                db_connect.commit()
+        elif out[sent] == 0 or out[ch_a] == 0:
+            if out[kind] == 'text':
+                db_set(robot.send_message(chat_id=channel, text=out[text]).message_id, out[0])
+            elif out[kind] == 'video':
+                db_set(robot.send_video(chat_id=channel, video=out[2], caption=out[text]).message_id, out[0])
+            elif out[kind] == 'photo':
+                cap = put(out[2], out[text])
+                db_set(robot.send_photo(chat_id=channel, photo=open('out.jpg', 'rb'), caption=cap).message_id, out[0])
+            elif out[kind] == 'audio':
+                db_set(robot.send_audio(chat_id=channel, audio=out[2], caption=out[text]).message_id, out[0])
+            elif out[kind] == 'document':
+                db_set(robot.send_document(chat_id=channel, document=out[2], caption=out[text]).message_id, out[0])
+            elif out[kind] == 'v_note':
+                db_set(robot.send_video_note(chat_id=channel, video_note=out[2]).message_id, out[0])
+            elif out[kind] == 'voice':
+                db_set(robot.send_voice(chat_id=channel, voice=out[2], caption=out[2]).message_id, out[0])
+    except IndexError:
         pass
+    except Exception as E:
+        print(1001, E)
 
 
-def video_send(bot, update):
-    if str(update.message.chat.id) == gp_channel:
-        file_id = str(update.message.video.file_id)
-        caption = id_remove(text=update.message.caption) if update.message.caption else ' '
-        bot.send_video(chat_id=channel, video=file_id,
-                       caption=caption + '\n' + '@Crazy_mind3')
-        time.sleep(current_mood())
-
-
-def gif(bot, update):
-    if str(update.message.chat.id) == gp_channel:
-        file_id = str(update.message.document.file_id)
-        caption = id_remove(text=update.message.caption) if update.message.caption else ' '
-        bot.send_document(chat_id=channel, document=file_id,
-                          caption=caption + '\n' + '@Crazy_mind3')
-        time.sleep(current_mood())
-
-
-def voice(bot, update):
-    if str(update.message.chat.id) == gp_channel:
-        file_id = str(update.message.voice.file_id)
-        caption = id_remove(text=update.message.caption) if update.message.caption else ' '
-        bot.send_voice(chat_id=channel, voice=file_id,
-                       caption=caption + '\n' + '@Crazy_mind3')
-        time.sleep(current_mood())
-
-
-def audio_send(bot, update):
-    if str(update.message.chat.id) == gp_channel:
-        file_id = str(update.message.audio.file_id)
-        caption = id_remove(text=update.message.caption) if update.message.caption else ' '
-        bot.send_audio(chat_id=channel, audio=file_id,
-                       caption=caption + '\n''@Crazy_mind3')
-        time.sleep(current_mood())
-
+create_db()
 dp = updater.dispatcher
 updater.start_polling()
-
 while True:
     time.sleep(1)
-    ct = current_time()
-    for i in range(0, len(hour)):
-        if ct == hour[i]:
-            print(str(ct) + ' ' + str(robot.get_chat_members_count(chat_id=channel)))
-
-    if ct == 113000:
-        print(time.ctime(), str(robot.get_chat_members_count(chat_id=channel)))
-
-    if ct == 203000:
-        with open('daylog.txt', 'a') as dlog:
-            dlog.write(str(current_date()) + ' ' + str(robot.get_chat_members_count(chat_id=channel)) + '\n')
-
-    dp.add_handler(MessageHandler(Filters.text, echo))
-    dp.add_handler(MessageHandler(Filters.photo, photo_send))
-    dp.add_handler(MessageHandler(Filters.video, video_send))
-    dp.add_handler(MessageHandler(Filters.document, gif))
-    dp.add_handler(MessageHandler(Filters.voice, voice))
-    dp.add_handler(MessageHandler(Filters.audio, audio_send))
-
+    dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
+    if 50000 < int(current_time()) and int(current_time()) < 90000:
+        time.sleep(10)
+    elif int(current_time()[2:]) in day:
+        send_to_ch()
+    if int(current_time()) == 0:
+        with open('daylog.txt', 'a') as log:
+            log.write('\n'+str(robot.get_chat_members_count(channel)) + current_time())
+# endregion
