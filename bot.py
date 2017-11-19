@@ -1,6 +1,7 @@
-from telegram.ext import Updater, MessageHandler, Filters
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 import matplotlib.pyplot as plt
 from PIL import Image
+from databse import *
 import telegram
 import datetime
 import sqlite3
@@ -8,17 +9,13 @@ import pytz
 import time
 import re
 
-# '354237673:AAEqjI0X33Ji3SnaO3y8bT_guZvhhvMyVGQ' ========= >> crazy
-# '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc' =========  >> ttiimmeerr
-TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
 # region vars
+TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
 updater = Updater(TOKEN)
 robot = telegram.Bot(TOKEN)
-db_connect = sqlite3.connect(database='bot_db.db', check_same_thread=False)
-cursor = db_connect.cursor()
-day = tuple(range(0, 6000, 1200))
-kind, text, edited, sent, ch_a = 1, 3, 6, 7, 8
-channel = '@crazymind3'
+day = tuple(range(0, 6000, 100))
+kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
+channel = '@ttiimmeerr'
 # endregion
 
 
@@ -104,71 +101,15 @@ def put(photo, caption):
         print(4004, E)
 
 
-# region DataBase
-
-
-def create_db():
-    try:
-        db_connect.execute("CREATE TABLE IF NOT EXISTS Queue("
-                           "ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
-                           "kind TEXT,"
-                           "file_id TEXT,"
-                           "caption TEXT,"
-                           "gp INTEGER,"
-                           "ch INTEGER,"
-                           "edited INTEGER DEFAULT 0,"
-                           "sent INTEGER DEFAULT 0,"
-                           "ch_a INTEGER DEFAULT 0);")
-        db_connect.execute("CREATE TABLE IF NOT EXISTS Activity("
-                           "ID INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0,"
-                           "admin_name TEXT,"
-                           "user_id INTEGER,"
-                           "message_count INTEGER);")
-        db_connect.commit()
-    except Exception as E:
-        print(E)
-
-
-def insert(kind, from_ad, file_id, caption, gp):
-    try:
-        cursor.execute("INSERT INTO Queue(kind, from_ad, file_id, caption, gp, ch_a) VALUES(?,?,?,?,?,?)",
-                       (kind, from_ad, file_id, caption, gp, 0))
-        db_connect.commit()
-    except Exception as E:
-        print(E)
-
-
-# 2002
-# todo edit this like insert()
-def db_edit(caption, gp, edited, sent):
-    try:
-        cursor.execute("UPDATE Queue SET edited={0}, sent={1}, caption='{2}' WHERE gp = {3}"
-                       .format(edited, sent, caption, gp))
-        db_connect.commit()
-    except Exception as E:
-        print(2002, E)
-
-
-# 3003
-def db_set(ch, i_d):
-    try:
-        cursor.execute("UPDATE Queue SET ch={0},edited=0,sent=1,ch_a=1 WHERE ID = {1}".format(ch, i_d))
-        db_connect.commit()
-    except Exception as E:
-        print(3003, E)
-
-
-# endregion
-
 # region bot
 
 
 # 3003
 def save(bot, update):
     try:
-        from_ad = update.message.from_user.id
         um = update.message
         ue = update.edited_message
+        from_ad = um.from_user.id if um else ue.from_user.id
         kind = name = text = file_id = 'none'
         if ue:
             gp_id = ue.message_id
@@ -196,36 +137,33 @@ def save(bot, update):
                     insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
             else:
                 text = id_remove(um.caption) if um.caption else id_remove('')
-                if str(text).startswith('.'):
-                    pass
-                else:
-                    if um.photo:
-                        kind = 'photo'
-                        file_id = um.photo[-1].file_id
-                    elif um.video:
-                        kind = 'video'
-                        file_id = um.video.file_id
-                    elif um.document:
-                        kind = 'document'
-                        file_id = um.document.file_id
-                    elif um.voice:
-                        kind = 'voice'
-                        file_id = um.voice.file_id
-                    elif um.audio:
-                        kind = 'audio'
-                        file_id = um.audio.file_id
-                    elif um.video_note:
-                        kind = 'v_note'
-                        file_id = um.video_note.file_id
-                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
+                if um.photo:
+                    kind = 'photo'
+                    file_id = um.photo[-1].file_id
+                elif um.video:
+                    kind = 'video'
+                    file_id = um.video.file_id
+                elif um.document:
+                    kind = 'document'
+                    file_id = um.document.file_id
+                elif um.voice:
+                    kind = 'voice'
+                    file_id = um.voice.file_id
+                elif um.audio:
+                    kind = 'audio'
+                    file_id = um.audio.file_id
+                elif um.video_note:
+                    kind = 'v_note'
+                    file_id = um.video_note.file_id
+                insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
     except Exception as E:
-        print(4004, E)
+        print(3003, E)
 
 
 # 1001
 def send_to_ch():
     try:
-        out = [i for i in cursor.execute("SELECT * FROM Queue WHERE sent=0 ORDER BY ID LIMIT 1")][0]
+        out = [i for i in cursor.execute("SELECT * FROM Queue WHERE sent=0 AND caption NOT LIKE '.%'ORDER BY ID LIMIT 1")][0]
         if out[edited] == 1 and out[sent] == 0 and out[ch_a] == 1:
             if out[kind] == 'text':
                 robot.edit_message_text(chat_id=channel, text=out[text], message_id=out[5])
@@ -264,19 +202,47 @@ def send_to_ch():
         print(1001, E)
 
 
+def report_members(bot, update, args):
+    um = update.message
+    out = db_connect.execute("SELECT * FROM Mem_count ORDER BY DESC LIMIT {}".format(args[0])).fetchall()
+    print(out)
+
+
 create_db()
 dp = updater.dispatcher
 updater.start_polling()
 while True:
     time.sleep(1)
     dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
+    dp.add_handler(CommandHandler('report', report_members, pass_args=True))
     if 50000 < int(current_time()[1]) < 90000:
-        time.sleep(10)
+        time.sleep(20)
+
     elif int(current_time()[1][2:]) in day:
         send_to_ch()
+        mem = robot.get_chat_members_count(channel)
+        last = [i[0] for i in db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()]
+        last = last[0] if last else mem
+        print(last)
+        # last = int(str(last)[0])
+        # print(int(last))
+        d = str(current_time()[0])
+        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES({},{},{})".format(
+            current_time()[0], mem - last, mem))
+        db_connect.commit()
+
     if int(current_time()[1]) == 0:
         with open('daylog.txt', 'a') as log:
             log.write('\n' + str(robot.get_chat_members_count(channel)) + ' '.join(current_time()))
+
+    if int(current_time()[1]) == 0:
+        mem = robot.get_chat_members_count(channel)
+        last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()
+        last = last if last else mem
+        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES({},{},{})".format(
+            current_time()[0], mem - last, mem))
+        db_connect.commit()
+
     if int(current_time()[1]) == 14230 and current_time()[2].lower() == 'sat':
         print('pie time')
         data = []
@@ -284,10 +250,9 @@ while True:
         for d in [i for i in db_connect.execute("SELECT * FROM Activity")]:
             label.append(d[1])
             data.append(d[3])
-        # todo fill activity database first
+        # todo fill activity database admins first
         plt.axes(aspect=1)
-        plt.pie(x=data, labels=label, shadow=True, explode=(0, 0.1, 0, 0), startangle=90, autopct='%1.1f%%',
-                radius=1.2)
+        plt.pie(x=data, labels=label, shadow=True, explode=(0, 0.1, 0, 0), startangle=90, autopct='%1.1f%%', radius=1.2)
         plt.savefig('plot.jpg')
         robot.send_photo(chat_id=channel, photo=open('plot.jpg', 'rb'), caption='Sina')
 # endregion
