@@ -4,7 +4,6 @@ from PIL import Image
 from databse import *
 import telegram
 import datetime
-import sqlite3
 import pytz
 import time
 import re
@@ -215,31 +214,21 @@ while True:
     time.sleep(1)
     dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
     dp.add_handler(CommandHandler('report', report_members, pass_args=True))
+
     if 50000 < int(current_time()[1]) < 90000:
         time.sleep(20)
 
     elif int(current_time()[1][2:]) in day:
         send_to_ch()
-        mem = robot.get_chat_members_count(channel)
-        last = [i[0] for i in db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()]
-        last = last[0] if last else mem
-        print(last)
-        # last = int(str(last)[0])
-        # print(int(last))
-        d = str(current_time()[0])
-        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES({},{},{})".format(
-            current_time()[0], mem - last, mem))
-        db_connect.commit()
 
     if int(current_time()[1]) == 0:
         with open('daylog.txt', 'a') as log:
             log.write('\n' + str(robot.get_chat_members_count(channel)) + ' '.join(current_time()))
-
-    if int(current_time()[1]) == 0:
         mem = robot.get_chat_members_count(channel)
-        last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()
-        last = last if last else mem
-        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES({},{},{})".format(
+        last = [i[0] for i in db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()]
+        last = last[0] if last else mem
+        d = str(current_time()[0])
+        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)", (
             current_time()[0], mem - last, mem))
         db_connect.commit()
 

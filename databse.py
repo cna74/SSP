@@ -24,7 +24,7 @@ def create_db():
                            "message_count INTEGER);")
         db_connect.execute("CREATE TABLE IF NOT EXISTS Mem_count("
                            "ID INTEGER PRIMARY KEY AUTOINCREMENT,"
-                           "ddd DATE,"
+                           "ddd TEXT,"
                            "balance INTEGER DEFAULT 0,"
                            "members INTEGER);")
         db_connect.commit()
