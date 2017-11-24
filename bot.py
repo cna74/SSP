@@ -154,7 +154,8 @@ def save(bot, update):
                 elif um.video_note:
                     kind = 'v_note'
                     file_id = um.video_note.file_id
-                insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
+                if kind in ('photo', 'video', 'document', 'voice', 'audio', 'v_vonte'):
+                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
     except Exception as E:
         print(3003, E)
 
@@ -202,9 +203,37 @@ def send_to_ch():
 
 
 def report_members(bot, update, args):
-    um = update.message
-    out = db_connect.execute("SELECT * FROM Mem_count ORDER BY DESC LIMIT {}".format(args[0])).fetchall()
-    print(out)
+    try:
+        days = args[0]
+        if not days.isnumeric():
+            bot.send_message(update.message.chat_id, 'بعد از report باید یه عدد وارد کنی')
+
+        out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
+        if days.isnumeric() and int(days) <= len(out):
+            balance = [j[2] for j in out]
+            plt.xlabel('days')
+            plt.ylabel('members')
+            plt.title('members report from {} till today plot'.format(out[-1][1]))
+            plt.plot(range(1, len(balance)+1), balance, marker='o', linestyle='-', color='r', label='members')
+            plt.legend(loc='lower right')
+            plt.gcf()
+            plt.savefig('plot.jpg')
+            bot.send_photo(chat_id=update.message.chat_id,
+                           photo=open('plot.jpg', 'rb'),
+                           caption='from {} till today'.format(out[-1][1]))
+
+        elif days.isnumeric and not int(days) <= len(out):
+            bot.send_message(update.message.chat_id, 'فعلا بیشتر از {} تا رو نمیتونم'.format(len(out)))
+
+        else:
+            bot.send_message(update.message.chat_id, 'والا خودمم نمیدونم چه مرگمه. بابامو خبر کن 😢😭')
+
+    except Exception as E:
+        print(E)
+
+
+def report_admins(bot, update):
+    pass
 
 
 create_db()
@@ -212,8 +241,9 @@ dp = updater.dispatcher
 updater.start_polling()
 while True:
     time.sleep(1)
+    dp.add_handler(CommandHandler('members', report_members, pass_args=True))
+    dp.add_handler(CommandHandler('admins', report_admins))
     dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
-    dp.add_handler(CommandHandler('report', report_members, pass_args=True))
 
     if 50000 < int(current_time()[1]) < 90000:
         time.sleep(20)
@@ -244,4 +274,5 @@ while True:
         plt.pie(x=data, labels=label, shadow=True, explode=(0, 0.1, 0, 0), startangle=90, autopct='%1.1f%%', radius=1.2)
         plt.savefig('plot.jpg')
         robot.send_photo(chat_id=channel, photo=open('plot.jpg', 'rb'), caption='Sina')
+
 # endregion
