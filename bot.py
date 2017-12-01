@@ -9,7 +9,7 @@ import time
 import re
 
 # region vars
-TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
+TOKEN = ''
 updater = Updater(TOKEN)
 robot = telegram.Bot(TOKEN)
 day = tuple(range(0, 6000, 100))
