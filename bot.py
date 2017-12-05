@@ -12,7 +12,7 @@ import re
 TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
 updater = Updater(TOKEN)
 robot = telegram.Bot(TOKEN)
-day = tuple(range(0, 6000, 100))
+day = tuple(range(0, 6000, 1100))
 kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
 channel = '@ttiimmeerr'
 # endregion
@@ -31,12 +31,15 @@ def current_time():
 
 
 def id_remove(entry):
+    entry = entry.lower()
     pattern = re.compile(r'(@\S+)', re.I)
     if re.search(pattern, entry):
         state = re.findall(pattern, entry)
         for state in state:
-            if not state.lower() in ('@crazymind3', '@crazy_miind3', '@mmd_bt'):
-                entry = re.sub(state, '', entry)
+            if state not in ('@crazymind3', '@crazy_miind3', '@mmd_bt'):
+                entry = re.sub(state, '@crazymind3', entry)
+        if not entry.endswith('@crazymind3'):
+            entry = entry + '\n@CrazyMind3'
         return entry
     else:
         return entry + '\n@CrazyMind3'
@@ -57,9 +60,8 @@ def put(photo, caption):
         bg = Image.open('tmp.jpg')
         res, lg_sz = bg.size, lg.size
         deaf_l, deaf_p, box_deaf = (3800, 1000), (1000, 3800), (3200, 3200)
-
         if res[0] > res[1]:
-            if not res[0] == deaf_l[0] and not res[1] == deaf_l[1]:
+            # if not res[0] == deaf_l[0] and not res[1] == deaf_l[1]:
                 n_deaf = [int((lg_sz[0] * res[0]) / deaf_l[0]), int((lg_sz[1] * res[1]) / deaf_l[1])]
                 lg.thumbnail(n_deaf)
 
@@ -69,7 +71,7 @@ def put(photo, caption):
                 lg.thumbnail(n_deaf)
 
         else:
-            if not res[0] == deaf_p[0] and not res[1] == deaf_p[1]:
+            # if not res[0] == deaf_p[0] and not res[1] == deaf_p[1]:
                 n_deaf = [int((lg_sz[0] * res[0]) / deaf_p[0]), int((lg_sz[1] * res[1]) / deaf_p[1])]
                 lg.thumbnail(n_deaf)
         lg_sz = lg.size
@@ -232,47 +234,25 @@ def report_members(bot, update, args):
         print(E)
 
 
-def report_admins(bot, update):
-    pass
-
-
 create_db()
 dp = updater.dispatcher
 updater.start_polling()
 while True:
     time.sleep(1)
-    dp.add_handler(CommandHandler('members', report_members, pass_args=True))
-    dp.add_handler(CommandHandler('admins', report_admins))
+    dp.add_handler(CommandHandler('report', report_members, pass_args=True))
     dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
-
-    if 50000 < int(current_time()[1]) < 90000:
+    if 30000 < int(current_time()[1]) < 90000:
         time.sleep(20)
 
-    elif int(current_time()[1][2:]) in day:
+    elif int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
         send_to_ch()
 
     if int(current_time()[1]) == 0:
-        with open('daylog.txt', 'a') as log:
-            log.write('\n' + str(robot.get_chat_members_count(channel)) + ' '.join(current_time()))
         mem = robot.get_chat_members_count(channel)
-        last = [i[0] for i in db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()]
-        last = last[0] if last else mem
-        d = str(current_time()[0])
-        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)", (
-            current_time()[0], mem - last, mem))
+        last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()[0][0]
+        last = last if last else mem
+        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
+                       (current_time()[0], mem - last, mem))
         db_connect.commit()
-
-    if int(current_time()[1]) == 14230 and current_time()[2].lower() == 'sat':
-        print('pie time')
-        data = []
-        label = []
-        for d in [i for i in db_connect.execute("SELECT * FROM Activity")]:
-            label.append(d[1])
-            data.append(d[3])
-        # todo fill activity database admins first
-        plt.axes(aspect=1)
-        plt.pie(x=data, labels=label, shadow=True, explode=(0, 0.1, 0, 0), startangle=90, autopct='%1.1f%%', radius=1.2)
-        plt.savefig('plot.jpg')
-        robot.send_photo(chat_id=channel, photo=open('plot.jpg', 'rb'), caption='Sina')
 
 # endregion
