@@ -12,7 +12,7 @@ import re
 TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
 updater = Updater(TOKEN)
 robot = telegram.Bot(TOKEN)
-day = tuple(range(0, 6000, 100))
+day = tuple(range(0, 6000, 1100))
 kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
 channel = '@ttiimmeerr'
 # endregion
