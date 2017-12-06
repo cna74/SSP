@@ -59,3 +59,6 @@ def db_set(ch, i_d):
         db_connect.commit()
     except Exception as E:
         print(3003, E)
+
+
+create_db()

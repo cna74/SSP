@@ -9,10 +9,10 @@ import time
 import re
 
 # region vars
-TOKEN = ''
+TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
 updater = Updater(TOKEN)
 robot = telegram.Bot(TOKEN)
-day = tuple(range(0, 6000, 1100))
+day = tuple(range(0, 6000, 100))
 kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
 channel = '@ttiimmeerr'
 # endregion
@@ -31,14 +31,13 @@ def current_time():
 
 
 def id_remove(entry):
-    entry = entry.lower()
     pattern = re.compile(r'(@\S+)', re.I)
     if re.search(pattern, entry):
         state = re.findall(pattern, entry)
         for state in state:
-            if state not in ('@crazymind3', '@crazy_miind3', '@mmd_bt'):
-                entry = re.sub(state, '@crazymind3', entry)
-        if not entry.endswith('@crazymind3'):
+            if state.lower() not in ('@crazymind3', '@mmd_bt'):
+                entry = re.sub(state, '@CrazyMind3', entry)
+        if not entry.lower().endswith('@crazymind3'):
             entry = entry + '\n@CrazyMind3'
         return entry
     else:
@@ -61,7 +60,6 @@ def put(photo, caption):
         res, lg_sz = bg.size, lg.size
         deaf_l, deaf_p, box_deaf = (3800, 1000), (1000, 3800), (3200, 3200)
         if res[0] > res[1]:
-            # if not res[0] == deaf_l[0] and not res[1] == deaf_l[1]:
                 n_deaf = [int((lg_sz[0] * res[0]) / deaf_l[0]), int((lg_sz[1] * res[1]) / deaf_l[1])]
                 lg.thumbnail(n_deaf)
 
@@ -71,7 +69,6 @@ def put(photo, caption):
                 lg.thumbnail(n_deaf)
 
         else:
-            # if not res[0] == deaf_p[0] and not res[1] == deaf_p[1]:
                 n_deaf = [int((lg_sz[0] * res[0]) / deaf_p[0]), int((lg_sz[1] * res[1]) / deaf_p[1])]
                 lg.thumbnail(n_deaf)
         lg_sz = lg.size
@@ -117,10 +114,10 @@ def save(bot, update):
             out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
             if ue.text and out[ch_a] == 1:
                 text = id_remove(ue.text)
-                robot.edit_message_text(chat_id=channel, message_id=out[5], text=text)
+                robot.edit_message_text(chat_id=channel, message_id=out[6], text=text)
             elif ue.caption and out[ch_a] == 1:
                 text = id_remove(ue.caption)
-                robot.edit_message_caption(chat_id=channel, message_id=out[5], caption=id_remove(text))
+                robot.edit_message_caption(chat_id=channel, message_id=out[6], caption=text)
             elif ue.text:
                 text = ue.text
                 db_edit(caption=text, gp=gp_id, edited=1, sent=0)
@@ -130,14 +127,11 @@ def save(bot, update):
         elif um:
             gp_id = um.message_id
             if um.text:
-                if str(um.text).startswith('.'):
-                    pass
-                else:
-                    text = id_remove(um.text)
-                    kind = 'text'
-                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
+                text = um.text
+                kind = 'text'
+                insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
             else:
-                text = id_remove(um.caption) if um.caption else id_remove('')
+                text = um.caption if um.caption else ''
                 if um.photo:
                     kind = 'photo'
                     file_id = um.photo[-1].file_id
@@ -156,7 +150,7 @@ def save(bot, update):
                 elif um.video_note:
                     kind = 'v_note'
                     file_id = um.video_note.file_id
-                if kind in ('photo', 'video', 'document', 'voice', 'audio', 'v_vonte'):
+                if kind in ('photo', 'video', 'document', 'voice', 'audio', 'v_note'):
                     insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
     except Exception as E:
         print(3003, E)
@@ -166,38 +160,32 @@ def save(bot, update):
 def send_to_ch():
     try:
         out = [i for i in cursor.execute("SELECT * FROM Queue WHERE sent=0 AND caption NOT LIKE '.%'ORDER BY ID LIMIT 1")][0]
+        cp = id_remove(out[text])
         if out[edited] == 1 and out[sent] == 0 and out[ch_a] == 1:
             if out[kind] == 'text':
-                robot.edit_message_text(chat_id=channel, text=out[text], message_id=out[5])
+                robot.edit_message_text(chat_id=channel, text=cp, message_id=out[5])
                 cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                 db_connect.commit()
             else:
-                robot.edit_message_caption(chat_id=channel, caption=out[text], message_id=out[5])
+                robot.edit_message_caption(chat_id=channel, caption=cp, message_id=out[5])
                 cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                 db_connect.commit()
         elif out[sent] == 0 or out[ch_a] == 0:
             if out[kind] == 'text':
-                db_set(robot.send_message(chat_id=channel, text=out[text]).message_id, out[0])
+                db_set(robot.send_message(chat_id=channel, text=cp).message_id, out[0])
             elif out[kind] == 'video':
-                db_set(robot.send_video(chat_id=channel, video=out[3], caption=out[text]).message_id, out[0])
+                db_set(robot.send_video(chat_id=channel, video=out[3], caption=cp).message_id, out[0])
             elif out[kind] == 'photo':
                 cap = put(out[3], out[text])
-                db_set(robot.send_photo(chat_id=channel, photo=open('out.jpg', 'rb'), caption=cap).message_id,
-                       out[0])
+                db_set(robot.send_photo(chat_id=channel, photo=open('out.jpg', 'rb'), caption=cap).message_id, out[0])
             elif out[kind] == 'audio':
-                db_set(robot.send_audio(chat_id=channel, audio=out[3], caption=out[text]).message_id, out[0])
+                db_set(robot.send_audio(chat_id=channel, audio=out[3], caption=cp).message_id, out[0])
             elif out[kind] == 'document':
-                db_set(robot.send_document(chat_id=channel, document=out[3], caption=out[text]).message_id, out[0])
+                db_set(robot.send_document(chat_id=channel, document=out[3], caption=cp).message_id, out[0])
             elif out[kind] == 'v_note':
                 db_set(robot.send_video_note(chat_id=channel, video_note=out[3]).message_id, out[0])
             elif out[kind] == 'voice':
-                db_set(robot.send_voice(chat_id=channel, voice=out[3], caption=out[text]).message_id, out[0])
-            admins = [i for i in cursor.execute("SELECT * FROM Activity").fetchall()]
-            for j in admins:
-                if out[1] in j:
-                    cursor.execute(
-                        "UPDATE Activity SET message_count={0} WHERE user_id={1}".format(j[3] + 1, out[1]))
-                    db_connect.commit()
+                db_set(robot.send_voice(chat_id=channel, voice=out[3], caption=cp).message_id, out[0])
     except IndexError:
         pass
     except Exception as E:
@@ -234,25 +222,27 @@ def report_members(bot, update, args):
         print(E)
 
 
-create_db()
 dp = updater.dispatcher
 updater.start_polling()
 while True:
-    time.sleep(1)
     dp.add_handler(CommandHandler('report', report_members, pass_args=True))
     dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
+    # print(current_time()[1][2:])
     if 30000 < int(current_time()[1]) < 90000:
         time.sleep(20)
 
-    elif int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
+    elif int(current_time()[1][2:]) in day:
         send_to_ch()
 
     if int(current_time()[1]) == 0:
-        mem = robot.get_chat_members_count(channel)
-        last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchall()[0][0]
+        mem = [robot.get_chat_members_count(channel)]
+        try:
+            last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
+        except IndexError:
+            last = mem[0]
         last = last if last else mem
         cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
-                       (current_time()[0], mem - last, mem))
+                       (current_time()[0], mem[0] - last[0], mem[0]))
         db_connect.commit()
 
 # endregion
