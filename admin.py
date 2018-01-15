@@ -1,4 +1,4 @@
-from databse import db_connect, cursor
+from database import db_connect, cursor
 
 
 class Admin:

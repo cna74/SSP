@@ -1,12 +1,15 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
-import matplotlib.pyplot as plt
+from pprint import pprint
 from PIL import Image
-from databse import *
+from database import *
 import telegram
 import datetime
 import pytz
 import time
 import re
+import matplotlib
+matplotlib.use('AGG')
+import matplotlib.pyplot as plt
 
 # region vars
 TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
@@ -32,12 +35,17 @@ def current_time():
 
 def id_remove(entry):
     pattern = re.compile(r'(@\S+)', re.I)
+    pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
+    if re.search(pattern1, entry):
+        logo = re.findall(pattern1, entry)[0]
+        entry = re.sub(pattern1, '', entry)
+        entry = logo + entry
     if re.search(pattern, entry):
         state = re.findall(pattern, entry)
         for state in state:
             if state.lower() not in ('@crazymind3', '@mmd_bt'):
                 entry = re.sub(state, '@CrazyMind3', entry)
-        if not entry.lower().endswith('@crazymind3'):
+        if not entry.lower().strip().endswith('@crazymind3'):
             entry = entry + '\n@CrazyMind3'
         return entry
     else:
@@ -60,8 +68,8 @@ def put(photo, caption):
         res, lg_sz = bg.size, lg.size
         deaf_l, deaf_p, box_deaf = (3800, 1000), (1000, 3800), (3200, 3200)
         if res[0] > res[1]:
-                n_deaf = [int((lg_sz[0] * res[0]) / deaf_l[0]), int((lg_sz[1] * res[1]) / deaf_l[1])]
-                lg.thumbnail(n_deaf)
+            n_deaf = [int((lg_sz[0] * res[0]) / deaf_l[0]), int((lg_sz[1] * res[1]) / deaf_l[1])]
+            lg.thumbnail(n_deaf)
 
         elif res[0] == res[1]:
             if not res == box_deaf:
@@ -69,8 +77,8 @@ def put(photo, caption):
                 lg.thumbnail(n_deaf)
 
         else:
-                n_deaf = [int((lg_sz[0] * res[0]) / deaf_p[0]), int((lg_sz[1] * res[1]) / deaf_p[1])]
-                lg.thumbnail(n_deaf)
+            n_deaf = [int((lg_sz[0] * res[0]) / deaf_p[0]), int((lg_sz[1] * res[1]) / deaf_p[1])]
+            lg.thumbnail(n_deaf)
         lg_sz = lg.size
         dict1 = {'nw': (0, 0),
                  'n': (int((res[0] / 2) - (lg_sz[0] / 2)), 0),
@@ -105,9 +113,9 @@ def put(photo, caption):
 # 3003
 def save(bot, update):
     try:
+        print(1)
         um = update.message
         ue = update.edited_message
-        from_ad = um.from_user.id if um else ue.from_user.id
         kind = name = text = file_id = 'none'
         if ue:
             gp_id = ue.message_id
@@ -125,6 +133,7 @@ def save(bot, update):
                 text = ue.caption
                 db_edit(caption=text, gp=gp_id, edited=1, sent=0)
         elif um:
+            from_ad = um.from_user.id if um.from_user.id else 'none'
             gp_id = um.message_id
             if um.text:
                 text = um.text
@@ -152,6 +161,7 @@ def save(bot, update):
                     file_id = um.video_note.file_id
                 if kind in ('photo', 'video', 'document', 'voice', 'audio', 'v_note'):
                     insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
+
     except Exception as E:
         print(3003, E)
 
@@ -159,7 +169,8 @@ def save(bot, update):
 # 1001
 def send_to_ch():
     try:
-        out = [i for i in cursor.execute("SELECT * FROM Queue WHERE sent=0 AND caption NOT LIKE '.%'ORDER BY ID LIMIT 1")][0]
+        out = [i for i in cursor.execute(
+            "SELECT * FROM Queue WHERE sent=0 AND caption NOT LIKE '.%' AND caption NOT LIKE '/%' ORDER BY ID LIMIT 1")][0]
         cp = id_remove(out[text])
         if out[edited] == 1 and out[sent] == 0 and out[ch_a] == 1:
             if out[kind] == 'text':
@@ -194,30 +205,39 @@ def send_to_ch():
 
 def report_members(bot, update, args):
     try:
-        days = args[0]
-        if not days.isnumeric():
-            bot.send_message(update.message.chat_id, 'بعد از report باید یه عدد وارد کنی')
-
-        out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
-        if days.isnumeric() and int(days) <= len(out):
-            balance = [j[2] for j in out]
+        print(update.message.chat_id)
+        param = days = out = months = title = None
+        param = str(args[0]).lower()
+        if re.fullmatch(r'd[0-9]*', param):
+            days = param[1:]
+            out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
+            title = '{} days'.format(days)
+        elif re.fullmatch(r'y[0-9]*-m[0-9]*', param):
+            year = param[1:3]
+            months = param[5:]
+            days = 32
+            out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
+            title = 'graph of 20{}-{}'.format(year, months)
+        if months or int(days) <= len(out):
+            balance = [j[3] for j in out]
+            balance = [i for i in reversed(balance)]
+            # balance.append(robot.get_chat_members_count(channel))
             plt.xlabel('days')
             plt.ylabel('members')
-            plt.title('members report from {} till today plot'.format(out[-1][1]))
-            plt.plot(range(1, len(balance)+1), balance, marker='o', linestyle='-', color='r', label='members')
-            plt.legend(loc='lower right')
-            plt.gcf()
+            plt.title(title)
+            plt.plot(range(1, len(balance) + 1), balance, marker='o', linestyle='--', label='now', color='red', markersize=4)
+            plt.plot(range(1, len(balance)), balance[:-1], marker='o', linestyle='--', label='members', color='blue', markersize=4)
+            plt.legend(loc=4)
             plt.savefig('plot.jpg')
             bot.send_photo(chat_id=update.message.chat_id,
                            photo=open('plot.jpg', 'rb'),
-                           caption='from {} till today'.format(out[-1][1]))
-
-        elif days.isnumeric and not int(days) <= len(out):
-            bot.send_message(update.message.chat_id, 'فعلا بیشتر از {} تا رو نمیتونم'.format(len(out)))
-
-        else:
-            bot.send_message(update.message.chat_id, 'والا خودمم نمیدونم چه مرگمه. بابامو خبر کن 😢😭')
-
+                           caption='balance = {}\nfrom {} till today'.format(balance[-1] - balance[0], out[-1][1]))
+            plt.close()
+        # elif days.isnumeric and not int(days) <= len(out):
+        #     bot.send_message(update.message.chat_id, 'فعلا بیشتر از {} تا رو نمیتونم'.format(len(out)))
+        #
+        # else:
+        #     bot.send_message(update.message.chat_id, 'والا خودمم نمیدونم چه مرگمه. بابامو خبر کن 😢😭')
     except Exception as E:
         print(E)
 
@@ -226,12 +246,12 @@ dp = updater.dispatcher
 updater.start_polling()
 while True:
     dp.add_handler(CommandHandler('report', report_members, pass_args=True))
-    dp.add_handler(MessageHandler(Filters.all, save, edited_updates=True))
-    # print(current_time()[1][2:])
+    dp.add_handler(MessageHandler(Filters.chat(-1001135513431), save, edited_updates=True))
+
     if 30000 < int(current_time()[1]) < 90000:
         time.sleep(20)
 
-    elif int(current_time()[1][2:]) in day:
+    elif int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
         send_to_ch()
 
     if int(current_time()[1]) == 0:
@@ -244,5 +264,5 @@ while True:
         cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
                        (current_time()[0], mem[0] - last[0], mem[0]))
         db_connect.commit()
-
+    time.sleep(1)
 # endregion
