@@ -205,23 +205,32 @@ def send_to_ch():
 
 def report_members(bot, update, args):
     try:
-        print(update.message.chat_id)
-        param = days = out = months = title = None
+        param = days = out = months = year = title = None
         param = str(args[0]).lower()
         if re.fullmatch(r'd[0-9]*', param):
             days = param[1:]
             out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
             title = '{} days'.format(days)
-        elif re.fullmatch(r'y[0-9]*-m[0-9]*', param):
-            year = param[1:3]
-            months = param[5:]
+        elif re.fullmatch(r'm[0-9]*', param):
+            months = param[1:]
+            year = current_time()[0][:4]
+            out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
+            title = 'graph of {}-{}'.format(year, months)
+        elif re.fullmatch(r'y[0-9]*', param):
+            year = '20'+param[1:] if len(param) == 3 else param[1:]
+            out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%' ORDER BY ID DESC".format(year))]
+            pprint(out)
+            title = 'graph of {}'.format(year)
+        elif re.fullmatch(r'[0-9]*-[0-9]*', param):
+            year = param[:2]
+            months = param[3:]
             days = 32
             out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
             title = 'graph of 20{}-{}'.format(year, months)
-        if months or int(days) <= len(out):
+        if months or year or int(days) <= len(out):
             balance = [j[3] for j in out]
             balance = [i for i in reversed(balance)]
-            # balance.append(robot.get_chat_members_count(channel))
+            balance.append(robot.get_chat_members_count(channel))
             plt.xlabel('days')
             plt.ylabel('members')
             plt.title(title)
@@ -246,7 +255,7 @@ dp = updater.dispatcher
 updater.start_polling()
 while True:
     dp.add_handler(CommandHandler('report', report_members, pass_args=True))
-    dp.add_handler(MessageHandler(Filters.chat(-1001135513431), save, edited_updates=True))
+    dp.add_handler(MessageHandler(Filters.chat(-1001141277396), save, edited_updates=True))
 
     if 30000 < int(current_time()[1]) < 90000:
         time.sleep(20)
