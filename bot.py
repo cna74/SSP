@@ -245,8 +245,8 @@ def report_members(bot, update, args):
         # elif days.isnumeric and not int(days) <= len(out):
         #     bot.send_message(update.message.chat_id, 'فعلا بیشتر از {} تا رو نمیتونم'.format(len(out)))
         #
-        # else:
-        #     bot.send_message(update.message.chat_id, 'والا خودمم نمیدونم چه مرگمه. بابامو خبر کن 😢😭')
+         else:
+             bot.send_message(update.message.chat_id, 'والا خودمم نمیدونم چه مرگمه. بابامو خبر کن 😢😭')
     except Exception as E:
         print(E)
 
