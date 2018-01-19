@@ -1,9 +1,10 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from khayyam import JalaliDatetime
+from datetime import datetime
 from pprint import pprint
 from PIL import Image
 from database import *
 import telegram
-import datetime
 import pytz
 import time
 import re
@@ -24,13 +25,10 @@ channel = '@ttiimmeerr'
 def current_time():
     utc = pytz.utc
     u = time.gmtime()
-    utc_dt = datetime.datetime(u[0], u[1], u[2], u[3], u[4], u[5], tzinfo=utc)
+    utc_dt = datetime(u[0], u[1], u[2], u[3], u[4], u[5], tzinfo=utc)
     eastern = pytz.timezone('Asia/Tehran')
     loc_dt = utc_dt.astimezone(eastern)
-    date = '%Y-%m-%d'
-    hour = '%H%M%S'
-    week_day = '%a'
-    return loc_dt.strftime(date), loc_dt.strftime(hour), loc_dt.strftime(week_day)
+    return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
 
 
 def id_remove(entry):
@@ -206,48 +204,50 @@ def send_to_ch():
 def report_members(bot, update, args):
     try:
         param = days = out = months = year = title = None
-        param = str(args[0]).lower()
-        if re.fullmatch(r'd[0-9]*', param):
-            days = param[1:]
-            out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
-            title = '{} days'.format(days)
-        elif re.fullmatch(r'm[0-9]*', param):
-            months = param[1:]
-            year = current_time()[0][:4]
-            out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
-            title = 'graph of {}-{}'.format(year, months)
-        elif re.fullmatch(r'y[0-9]*', param):
-            year = '20'+param[1:] if len(param) == 3 else param[1:]
-            out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%' ORDER BY ID DESC".format(year))]
-            pprint(out)
-            title = 'graph of {}'.format(year)
-        elif re.fullmatch(r'[0-9]*-[0-9]*', param):
-            year = param[:2]
-            months = param[3:]
-            days = 32
-            out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
-            title = 'graph of 20{}-{}'.format(year, months)
-        if months or year or int(days) <= len(out):
+        if args:
+            param = str(args[0]).lower()
+            if re.fullmatch(r'd[0-9]*', param):
+                days = param[1:]
+                out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
+                title = '{} days'.format(days)
+            elif re.fullmatch(r'm[0-9]*', param):
+                months = param[1:]
+                year = current_time()[0][:4]
+                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
+                title = 'graph of {}-{}'.format(year, months)
+            elif re.fullmatch(r'y[0-9]*', param):
+                year = '20'+param[1:] if len(param) == 3 else param[1:]
+                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%' ORDER BY ID DESC".format(year))]
+                pprint(out)
+                title = 'graph of {}'.format(year)
+            elif re.fullmatch(r'[0-9]*-[0-9]*', param):
+                year = param[:2]
+                months = param[3:]
+                days = 32
+                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
+                title = 'graph of 20{}-{}'.format(year, months)
+        else:
+            out = db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC").fetchall()
+            print(out)
+        if out:
             balance = [j[3] for j in out]
             balance = [i for i in reversed(balance)]
             balance.append(robot.get_chat_members_count(channel))
             plt.xlabel('days')
             plt.ylabel('members')
             plt.title(title)
-            plt.plot(range(1, len(balance) + 1), balance, marker='o', linestyle='--', label='now', color='red', markersize=4)
-            plt.plot(range(1, len(balance)), balance[:-1], marker='o', linestyle='--', label='members', color='blue', markersize=4)
+            plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='red', markersize=4)
+            plt.plot(range(1, len(balance)), balance[:-1], marker='o', label='members', color='blue', markersize=4)
             plt.legend(loc=4)
             plt.savefig('plot.jpg')
             bot.send_photo(chat_id=update.message.chat_id,
                            photo=open('plot.jpg', 'rb'),
-                           caption='balance = {}\nfrom {} till today'.format(balance[-1] - balance[0], out[-1][1]))
+                           caption='balance = {}\naverage = {}\nfrom {}'.format(
+                               balance[-1] - balance[0], sum(balance)/len(balance), out[-1][1]))
             plt.close()
-        # elif days.isnumeric and not int(days) <= len(out):
-        #     bot.send_message(update.message.chat_id, 'فعلا بیشتر از {} تا رو نمیتونم'.format(len(out)))
-        #
-         else:
-             bot.send_message(update.message.chat_id, 'والا خودمم نمیدونم چه مرگمه. بابامو خبر کن 😢😭')
     except Exception as E:
+        robot.send_message(chat_id=update.message.chat_id, text='**ERROR {}**'.format(update.message.text),
+                           parse_mode='Markdown')
         print(E)
 
 
