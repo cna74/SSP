@@ -220,6 +220,7 @@ def report_members(bot, update, args):
                 year = current_time()[0][:4]
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
                 title = 'graph of {}-{}'.format(year, months)
+                print(year+months, current_time()[0].split('-')[:7])
                 if year+months == current_time()[0].split('-')[:7]:
                     plus = True
             elif re.fullmatch(r'y[0-9]*', param):
