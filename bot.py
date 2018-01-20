@@ -244,8 +244,8 @@ def report_members(bot, update, args):
             balance = [i for i in reversed([j[3] for j in out])]
             if plus:
                 balance.append(robot.get_chat_members_count(channel_name))
-                plt.plot(range(1, len(balance)), balance[:-1], marker='o', label='members', color='blue', markersize=4)
                 plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='red', markersize=4)
+                plt.plot(range(1, len(balance)), balance[:-1], marker='o', label='members', color='blue', markersize=4)
             else:
                 plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='blue', markersize=4)
             plt.xlabel('days')
