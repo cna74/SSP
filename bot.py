@@ -244,17 +244,18 @@ def report_members(bot, update, args):
             balance = [i for i in reversed([j[3] for j in out])]
             if plus:
                 balance.append(robot.get_chat_members_count(channel_name))
+                plt.plot(range(1, len(balance)), balance[:-1], marker='o', label='members', color='blue', markersize=4)
+                plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='red', markersize=4)
+            else:
+                plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='blue', markersize=4)
             plt.xlabel('days')
             plt.ylabel('members')
             plt.title(title)
-            plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='red', markersize=4)
-            plt.plot(range(1, len(balance)), balance[:-1], marker='o', label='members', color='blue', markersize=4)
             plt.legend(loc=4)
             plt.savefig('plot.jpg')
             bot.send_photo(chat_id=update.message.chat_id,
                            photo=open('plot.jpg', 'rb'),
-                           parse_mode='Markdown',
-                           caption='**{}**\nbalance = {}\naverage = {}\nfrom {} till {}'.format(
+                           caption='{}\nbalance = {}\naverage = {}\nfrom {} till {}'.format(
                                out[-1][1], balance[-1] - balance[0], sum(balance)/len(balance), balance[0], balance[-1]))
             plt.close()
     except Exception as E:
@@ -265,6 +266,7 @@ def report_members(bot, update, args):
 
 dp = updater.dispatcher
 updater.start_polling()
+print('started')
 while True:
     dp.add_handler(CommandHandler('report', report_members, pass_args=True))
     dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
