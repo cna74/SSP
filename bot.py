@@ -7,18 +7,23 @@ from database import *
 import telegram
 import pytz
 import time
+import var
 import re
 import matplotlib
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
 # region vars
-TOKEN = '410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc'
-updater = Updater(TOKEN)
-robot = telegram.Bot(TOKEN)
-day = tuple(range(0, 6000, 1100))
-kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
-channel = '@ttiimmeerr'
+try:
+    updater = Updater(var.TOKEN)
+    robot = telegram.Bot(var.TOKEN)
+    channel_name = var.channel_name
+    group_id = var.group_id
+    kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
+    day = tuple(range(0, 6000, 1100))
+except Exception as E:
+    print("didn't feed variables")
+    raise AttributeError
 # endregion
 
 
@@ -120,10 +125,10 @@ def save(bot, update):
             out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
             if ue.text and out[ch_a] == 1:
                 text = id_remove(ue.text)
-                robot.edit_message_text(chat_id=channel, message_id=out[6], text=text)
+                robot.edit_message_text(chat_id=channel_name, message_id=out[6], text=text)
             elif ue.caption and out[ch_a] == 1:
                 text = id_remove(ue.caption)
-                robot.edit_message_caption(chat_id=channel, message_id=out[6], caption=text)
+                robot.edit_message_caption(chat_id=channel_name, message_id=out[6], caption=text)
             elif ue.text:
                 text = ue.text
                 db_edit(caption=text, gp=gp_id, edited=1, sent=0)
@@ -172,29 +177,29 @@ def send_to_ch():
         cp = id_remove(out[text])
         if out[edited] == 1 and out[sent] == 0 and out[ch_a] == 1:
             if out[kind] == 'text':
-                robot.edit_message_text(chat_id=channel, text=cp, message_id=out[5])
+                robot.edit_message_text(chat_id=channel_name, text=cp, message_id=out[5])
                 cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                 db_connect.commit()
             else:
-                robot.edit_message_caption(chat_id=channel, caption=cp, message_id=out[5])
+                robot.edit_message_caption(chat_id=channel_name, caption=cp, message_id=out[5])
                 cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                 db_connect.commit()
         elif out[sent] == 0 or out[ch_a] == 0:
             if out[kind] == 'text':
-                db_set(robot.send_message(chat_id=channel, text=cp).message_id, out[0])
+                db_set(robot.send_message(chat_id=channel_name, text=cp).message_id, out[0])
             elif out[kind] == 'video':
-                db_set(robot.send_video(chat_id=channel, video=out[3], caption=cp).message_id, out[0])
+                db_set(robot.send_video(chat_id=channel_name, video=out[3], caption=cp).message_id, out[0])
             elif out[kind] == 'photo':
                 cap = put(out[3], out[text])
-                db_set(robot.send_photo(chat_id=channel, photo=open('out.jpg', 'rb'), caption=cap).message_id, out[0])
+                db_set(robot.send_photo(chat_id=channel_name, photo=open('out.jpg', 'rb'), caption=cap).message_id, out[0])
             elif out[kind] == 'audio':
-                db_set(robot.send_audio(chat_id=channel, audio=out[3], caption=cp).message_id, out[0])
+                db_set(robot.send_audio(chat_id=channel_name, audio=out[3], caption=cp).message_id, out[0])
             elif out[kind] == 'document':
-                db_set(robot.send_document(chat_id=channel, document=out[3], caption=cp).message_id, out[0])
+                db_set(robot.send_document(chat_id=channel_name, document=out[3], caption=cp).message_id, out[0])
             elif out[kind] == 'v_note':
-                db_set(robot.send_video_note(chat_id=channel, video_note=out[3]).message_id, out[0])
+                db_set(robot.send_video_note(chat_id=channel_name, video_note=out[3]).message_id, out[0])
             elif out[kind] == 'voice':
-                db_set(robot.send_voice(chat_id=channel, voice=out[3], caption=cp).message_id, out[0])
+                db_set(robot.send_voice(chat_id=channel_name, voice=out[3], caption=cp).message_id, out[0])
     except IndexError:
         pass
     except Exception as E:
@@ -232,7 +237,7 @@ def report_members(bot, update, args):
         if out:
             balance = [j[3] for j in out]
             balance = [i for i in reversed(balance)]
-            balance.append(robot.get_chat_members_count(channel))
+            balance.append(robot.get_chat_members_count(channel_name))
             plt.xlabel('days')
             plt.ylabel('members')
             plt.title(title)
@@ -255,7 +260,7 @@ dp = updater.dispatcher
 updater.start_polling()
 while True:
     dp.add_handler(CommandHandler('report', report_members, pass_args=True))
-    dp.add_handler(MessageHandler(Filters.chat(-1001141277396), save, edited_updates=True))
+    dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
 
     if 30000 < int(current_time()[1]) < 90000:
         time.sleep(20)
@@ -264,7 +269,7 @@ while True:
         send_to_ch()
 
     if int(current_time()[1]) == 0:
-        mem = [robot.get_chat_members_count(channel)]
+        mem = [robot.get_chat_members_count(channel_name)]
         try:
             last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
         except IndexError:
