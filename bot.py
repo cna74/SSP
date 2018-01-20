@@ -208,7 +208,7 @@ def send_to_ch():
 
 def report_members(bot, update, args):
     try:
-        param = days = out = months = year = title = None
+        param = days = out = months = year = title = plus = None
         if args:
             param = str(args[0]).lower()
             if re.fullmatch(r'd[0-9]*', param):
@@ -220,24 +220,30 @@ def report_members(bot, update, args):
                 year = current_time()[0][:4]
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
                 title = 'graph of {}-{}'.format(year, months)
+                if year+months == current_time()[0].split('-')[:7]:
+                    plus = True
             elif re.fullmatch(r'y[0-9]*', param):
                 year = '20'+param[1:] if len(param) == 3 else param[1:]
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%' ORDER BY ID DESC".format(year))]
-                pprint(out)
                 title = 'graph of {}'.format(year)
+                if year == current_time()[0][:4]:
+                    plus = True
             elif re.fullmatch(r'[0-9]*-[0-9]*', param):
                 year = param[:2]
                 months = param[3:]
                 days = 32
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
                 title = 'graph of 20{}-{}'.format(year, months)
+                if year+months == current_time()[0].split('-')[:7]:
+                    plus = True
         else:
             out = db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC").fetchall()
-            print(out)
+            title = "full graph"
+            plus = True
         if out:
-            balance = [j[3] for j in out]
-            balance = [i for i in reversed(balance)]
-            balance.append(robot.get_chat_members_count(channel_name))
+            balance = [i for i in reversed([j[3] for j in out])]
+            if plus:
+                balance.append(robot.get_chat_members_count(channel_name))
             plt.xlabel('days')
             plt.ylabel('members')
             plt.title(title)
@@ -247,8 +253,9 @@ def report_members(bot, update, args):
             plt.savefig('plot.jpg')
             bot.send_photo(chat_id=update.message.chat_id,
                            photo=open('plot.jpg', 'rb'),
-                           caption='balance = {}\naverage = {}\nfrom {}'.format(
-                               balance[-1] - balance[0], sum(balance)/len(balance), out[-1][1]))
+                           parse_mode='Markdown',
+                           caption='**{}**\nbalance = {}\naverage = {}\nfrom {} till {}'.format(
+                               out[-1][1], balance[-1] - balance[0], sum(balance)/len(balance), balance[0], balance[-1]))
             plt.close()
     except Exception as E:
         robot.send_message(chat_id=update.message.chat_id, text='**ERROR {}**'.format(update.message.text),
