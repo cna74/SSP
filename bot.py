@@ -220,8 +220,8 @@ def report_members(bot, update, args):
                 year = current_time()[0][:4]
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
                 title = 'graph of {}-{}'.format(year, months)
-                print(year+months, ''.join(current_time()[0].split('-'))[:7])
-                if year+months == ''.join(current_time()[0].split('-'))[:7]:
+                print(year+months, ''.join(current_time()[0].split('-'))[:6])
+                if year+months == ''.join(current_time()[0].split('-'))[:6]:
                     print('True')
                     plus = True
             elif re.fullmatch(r'y[0-9]*', param):
@@ -236,7 +236,7 @@ def report_members(bot, update, args):
                 days = 32
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
                 title = 'graph of 20{}-{}'.format(year, months)
-                if year+months == ''.join(current_time()[0].split('-'))[:7]:
+                if year+months == ''.join(current_time()[0].split('-'))[:6]:
                     plus = True
         else:
             out = db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC").fetchall()
