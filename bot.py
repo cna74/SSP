@@ -1,8 +1,8 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
-from khayyam import JalaliDatetime
-from datetime import datetime
+from khayyam import JalaliDate, JalaliDatetime
+from datetime import datetime, timedelta
 from pprint import pprint
-from PIL import Image
+# from PIL import Image
 from database import *
 import telegram
 import pytz
@@ -206,6 +206,23 @@ def send_to_ch():
         print(1001, E)
 
 
+def _before(year=None, months=None, date=None):
+    out = None
+    if year and months:
+        before = JalaliDate().strptime(year + months, '%Y%m') - timedelta(days=1)
+        out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
+        out.extend([i for i in db_connect.execute(
+            "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
+    # if date:
+    #     # todo start from here
+    #     year, months, day = date
+    #     before = JalaliDate().strptime(date, '%Y-%m-%d') - timedelta(days=1)
+    #     out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
+    #     out.extend([i for i in db_connect.execute(
+    #         "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}-{}%'".format(year, months)).fetchall()])
+    return out
+
+
 def report_members(bot, update, args):
     try:
         param = days = out = months = year = title = plus = None
@@ -213,50 +230,55 @@ def report_members(bot, update, args):
             param = str(args[0]).lower()
             if re.fullmatch(r'd[0-9]*', param):
                 days = param[1:]
-                out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
+                date = current_time()[0]
+                out = [i for i in db_connect.execute("SELECT * FROM Mem_count LIMIT {}".format(days))]
                 title = '{} days'.format(days)
             elif re.fullmatch(r'm[0-9]*', param):
                 months = param[1:]
                 year = current_time()[0][:4]
-                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%' ORDER BY ID DESC".format(year, months))]
+                out = _before(year, months)
                 title = 'graph of {}-{}'.format(year, months)
-                if year+months == ''.join(current_time()[0].split('-'))[:6]:
+                if year+months == str(current_time()[0].replace('-', '')[:6]):
                     plus = True
             elif re.fullmatch(r'y[0-9]*', param):
+                # todo same problem with months but different
                 year = '20'+param[1:] if len(param) == 3 else param[1:]
-                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%' ORDER BY ID DESC".format(year))]
+                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%'".format(year))]
                 title = 'graph of {}'.format(year)
                 if year == current_time()[0][:4]:
                     plus = True
             elif re.fullmatch(r'[0-9]*-[0-9]*', param):
                 year = param[:2]
                 months = param[3:]
-                days = 32
-                out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '20{}-{}%' ORDER BY ID DESC".format(year, months))]
+                out = _before(year, months)
                 title = 'graph of 20{}-{}'.format(year, months)
                 if year+months == ''.join(current_time()[0].split('-'))[:6]:
                     plus = True
         else:
-            out = db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC").fetchall()
+            out = db_connect.execute("SELECT * FROM Mem_count").fetchall()
             title = "full graph"
             plus = True
         if out:
-            balance = [i for i in reversed([j[3] for j in out])]
+            pprint(out)
+            members = [i for i in [j[3] for j in out]]
+            balance = [i for i in [j[2] for j in out]]
             if plus:
-                balance.append(robot.get_chat_members_count(channel_name))
-                plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='red', markersize=4)
-                plt.plot(range(1, len(balance)), balance[:-1], marker='o', label='members', color='blue', markersize=4)
+                members.append(robot.get_chat_members_count(channel_name))
+                plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
+                plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
             else:
-                plt.plot(range(1, len(balance) + 1), balance, marker='o', label='now', color='blue', markersize=4)
+                plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue', markersize=4)
             plt.xlabel('days')
             plt.ylabel('members')
             plt.title(title)
             plt.legend(loc=4)
-            plt.savefig('plot.jpg')
+            plt.savefig('plot.png')
+            sum(balance)
+            len(balance)
             bot.send_photo(chat_id=update.message.chat_id,
-                           photo=open('plot.jpg', 'rb'),
+                           photo=open('plot.png', 'rb'),
                            caption='{}\nbalance = {}\naverage = {}\nfrom {} till {}'.format(
-                               out[-1][1], balance[-1] - balance[0], sum(balance)/len(balance), balance[0], balance[-1]))
+                               title, members[-1] - members[0], sum(balance)/len(balance), members[0], members[-1]))
             plt.close()
     except Exception as E:
         robot.send_message(chat_id=update.message.chat_id, text='**ERROR {}**'.format(update.message.text),
@@ -272,11 +294,20 @@ while True:
     dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
 
     if 30000 < int(current_time()[1]) < 90000:
-        time.sleep(20)
+        time.sleep(10)
 
     elif int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
         send_to_ch()
+    elif int(current_time()[1]) == 25900:
+        robot.send_message(chat_id=channel_name,
+                           text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+👉🏻 @Mmd_bt 👈🏻
+شرایط در پی‌وی گفته میشه🍁
+#اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
 
+برای پاسخگویی لطفا صبور باشید🤠
+
+@crazymind3''')
     if int(current_time()[1]) == 0:
         mem = [robot.get_chat_members_count(channel_name)]
         try:
