@@ -286,12 +286,18 @@ def report_members(bot, update, args):
         print(E)
 
 
+def remain(bot, update):
+    rem = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0").fetchall())
+    bot.send_message(chat_id=update.message.chat_id, text='{} remaining'.format(rem))
+
+
 dp = updater.dispatcher
 updater.start_polling()
 print('started')
 if __name__ == '__main__':
     while True:
         dp.add_handler(CommandHandler('report', report_members, pass_args=True))
+        dp.add_handler(CommandHandler('remain', remain))
         dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
 
         if int(current_time()[1][2:]) == 0:
