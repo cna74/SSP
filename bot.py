@@ -277,7 +277,7 @@ def report_members(bot, update, args):
             plt.savefig('plot.png')
             bot.send_photo(chat_id=update.message.chat_id,
                            photo=open('plot.png', 'rb'),
-                           caption='{}\nbalance = {:.2f}\naverage = {}\nfrom {} till {}'.format(
+                           caption='{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
                                title, members[-1] - members[0], sum(balance) / len(balance), members[0], members[-1]))
             plt.close()
     except Exception as E:
