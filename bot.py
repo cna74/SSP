@@ -287,7 +287,7 @@ def report_members(bot, update, args):
 
 
 def remain(bot, update):
-    rem = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0").fetchall())
+    rem = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
     bot.send_message(chat_id=update.message.chat_id, text='{} remaining'.format(rem))
 
 
