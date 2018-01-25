@@ -117,7 +117,6 @@ def put(photo, caption):
 # 3003
 def save(bot, update):
     try:
-        print(1)
         um = update.message
         ue = update.edited_message
         kind = name = text = file_id = 'none'
@@ -137,12 +136,13 @@ def save(bot, update):
                 text = ue.caption
                 db_edit(caption=text, gp=gp_id, edited=1, sent=0)
         elif um:
+            in_date = ' '.join(current_time())
             from_ad = um.from_user.id if um.from_user.id else 'none'
             gp_id = um.message_id
             if um.text:
                 text = um.text
                 kind = 'text'
-                insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
+                insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
             else:
                 text = um.caption if um.caption else ''
                 if um.photo:
@@ -164,7 +164,7 @@ def save(bot, update):
                     kind = 'v_note'
                     file_id = um.video_note.file_id
                 if kind in ('photo', 'video', 'document', 'voice', 'audio', 'v_note'):
-                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id)
+                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
 
     except Exception as E:
         print(3003, E)
@@ -187,20 +187,21 @@ def send_to_ch():
                 db_connect.commit()
         elif out[sent] == 0 or out[ch_a] == 0:
             if out[kind] == 'text':
-                db_set(robot.send_message(chat_id=channel_name, text=cp).message_id, out[0])
+                ch = robot.send_message(chat_id=channel_name, text=cp).message_id
             elif out[kind] == 'video':
-                db_set(robot.send_video(chat_id=channel_name, video=out[3], caption=cp).message_id, out[0])
+                ch = robot.send_video(chat_id=channel_name, video=out[3], caption=cp).message_id
             elif out[kind] == 'photo':
                 cap = put(out[3], out[text])
-                db_set(robot.send_photo(chat_id=channel_name, photo=open('out.jpg', 'rb'), caption=cap).message_id, out[0])
+                ch = robot.send_photo(chat_id=channel_name, photo=open('out.jpg', 'rb'), caption=cap).message_id
             elif out[kind] == 'audio':
-                db_set(robot.send_audio(chat_id=channel_name, audio=out[3], caption=cp).message_id, out[0])
+                ch = robot.send_audio(chat_id=channel_name, audio=out[3], caption=cp).message_id
             elif out[kind] == 'document':
-                db_set(robot.send_document(chat_id=channel_name, document=out[3], caption=cp).message_id, out[0])
+                ch = robot.send_document(chat_id=channel_name, document=out[3], caption=cp).message_id
             elif out[kind] == 'v_note':
-                db_set(robot.send_video_note(chat_id=channel_name, video_note=out[3]).message_id, out[0])
+                ch = robot.send_video_note(chat_id=channel_name, video_note=out[3]).message_id
             elif out[kind] == 'voice':
-                db_set(robot.send_voice(chat_id=channel_name, voice=out[3], caption=cp).message_id, out[0])
+                ch = robot.send_voice(chat_id=channel_name, voice=out[3], caption=cp).message_id
+            db_set(ch=ch, i_d=out[0], out_date=' '.join(current_time()),)
     except IndexError:
         pass
     except Exception as E:
@@ -306,9 +307,6 @@ if __name__ == '__main__':
         if int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
             send_to_ch()
 
-        elif 30000 < int(current_time()[1]) < 90000:
-            time.sleep(10)
-
         elif int(current_time()[1]) == 25900:
             robot.send_message(chat_id=channel_name,
                                text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
@@ -319,6 +317,8 @@ if __name__ == '__main__':
     برای پاسخگویی لطفا صبور باشید🤠
     
     @crazymind3''')
+        elif 30000 < int(current_time()[1]) < 90000:
+            time.sleep(10)
 
         if int(current_time()[1]) == 0:
             mem = [robot.get_chat_members_count(channel_name)]
