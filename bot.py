@@ -2,15 +2,15 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from khayyam import JalaliDate, JalaliDatetime
 from datetime import datetime, timedelta
 from pprint import pprint
-from PIL import Image
 from database import *
+from PIL import Image
+import matplotlib
 import telegram
 import psutil
 import pytz
 import time
 import var
 import re
-import matplotlib
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
@@ -186,6 +186,7 @@ def send_to_ch():
                 cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                 db_connect.commit()
         elif out[sent] == 0 or out[ch_a] == 0:
+            ch = None
             if out[kind] == 'text':
                 ch = robot.send_message(chat_id=channel_name, text=cp).message_id
             elif out[kind] == 'video':
