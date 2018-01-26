@@ -21,7 +21,7 @@ try:
     channel_name = var.channel_name
     group_id = var.group_id
     kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
-    day = tuple(range(0, 6000, 1100))
+    day = tuple(range(0, 6000, 100))
 except Exception as E:
     print("didn't fetch variables")
     raise AttributeError
@@ -243,8 +243,7 @@ def report_members(bot, update, args):
                 if year+months == str(current_time()[0].replace('-', '')[:6]):
                     plus = True
             elif re.fullmatch(r'y[0-9]*', param):
-                # todo same problem with months but different
-                year = '20'+param[1:] if len(param) == 3 else param[1:]
+                year = '13'+param[1:] if len(param) == 3 else param[1:]
                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%'".format(year))]
                 title = 'graph of {}'.format(year)
                 if year == current_time()[0][:4]:
@@ -258,15 +257,15 @@ def report_members(bot, update, args):
                     plus = True
         else:
             out = db_connect.execute("SELECT * FROM Mem_count").fetchall()
-            title = "full graph"
+            title = "starts from {}".format(out[0][1])
             plus = True
         if out:
             members = [i for i in [j[3] for j in out]]
             balance = [i for i in [j[2] for j in out]]
             if plus:
-                tmp = robot.get_chat_members_count(channel_name)
-                balance.append(tmp - members[-1])
-                members.append(tmp)
+                now = robot.get_chat_members_count(channel_name)
+                balance.append(now - members[-1])
+                members.append(now)
                 plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
                 plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
             else:
@@ -279,7 +278,7 @@ def report_members(bot, update, args):
             bot.send_photo(chat_id=update.message.chat_id,
                            photo=open('plot.png', 'rb'),
                            caption='{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-                               title, members[-1] - members[0], sum(balance) / len(balance), members[0], members[-1]))
+                            title, members[-1] - members[0], sum(balance) / len(balance), members[0], members[-1]))
             plt.close()
     except Exception as E:
         robot.send_message(chat_id=update.message.chat_id, text='**ERROR {}**'.format(update.message.text),
@@ -288,48 +287,61 @@ def report_members(bot, update, args):
 
 
 def remain(bot, update):
-    rem = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
-    bot.send_message(chat_id=update.message.chat_id, text='{} remaining'.format(rem))
+    remaining = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
+    now = JalaliDatetime().strptime(' '.join(current_time()), '%Y-%m-%d %H%M%S')
+    step = now
+    for i in range(remaining):
+        if 3 >= step.hour <= 9:
+            step += timedelta(hours=step.hour - 9)
+        step += timedelta(minutes=11)
+    bot.send_message(chat_id=update.message.chat_id, text='{} remaining\nchannel will feed untill {}'.format(
+        remaining, step.strftime('%Y-%m-%d %H:%:M:%S')))
 
 
 dp = updater.dispatcher
 updater.start_polling()
-print('started')
-if __name__ == '__main__':
-    while True:
-        dp.add_handler(CommandHandler('report', report_members, pass_args=True))
-        dp.add_handler(CommandHandler('remain', remain))
-        dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
-
-        if int(current_time()[1][2:]) == 0:
-            robot.send_message(chat_id=103086461, text=psutil.virtual_memory()[2])
-
-        if int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
-            send_to_ch()
-
-        elif int(current_time()[1]) == 25900:
-            robot.send_message(chat_id=channel_name,
-                               text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-    👉🏻 @Mmd_bt 👈🏻
-    شرایط در پی‌وی گفته میشه🍁
-    #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
-    
-    برای پاسخگویی لطفا صبور باشید🤠
-    
-    @crazymind3''')
-        elif 30000 < int(current_time()[1]) < 90000:
-            time.sleep(10)
-
-        if int(current_time()[1]) == 0:
-            mem = [robot.get_chat_members_count(channel_name)]
-            try:
-                last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
-            except IndexError:
-                last = mem[0]
-            last = last if last else mem
-            cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
-                           (current_time()[0], mem[0] - last[0], mem[0]))
-            db_connect.commit()
-
-        time.sleep(1)
 # endregion
+print('started')
+
+
+def main():
+    dp.add_handler(CommandHandler('report', report_members, pass_args=True))
+    dp.add_handler(CommandHandler('remain', remain))
+    dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
+
+    if int(current_time()[1][2:]) == 0:
+        robot.send_message(chat_id=103086461, text=psutil.virtual_memory()[2])
+
+    if int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
+        send_to_ch()
+
+    elif int(current_time()[1]) == 25900:
+        robot.send_message(chat_id=channel_name,
+                           text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+        👉🏻 @Mmd_bt 👈🏻
+        شرایط در پی‌وی گفته میشه🍁
+        #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
+
+        برای پاسخگویی لطفا صبور باشید🤠
+
+        @crazymind3''')
+    elif 30000 < int(current_time()[1]) < 90000:
+        time.sleep(10)
+
+    if int(current_time()[1]) == 0:
+        mem = [robot.get_chat_members_count(channel_name)]
+        try:
+            last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
+        except IndexError:
+            last = mem[0]
+        last = last if last else mem
+        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
+                       (current_time()[0], mem[0] - last[0], mem[0]))
+        db_connect.commit()
+
+    time.sleep(1)
+    main()
+
+
+if __name__ == '__main__':
+    main()
