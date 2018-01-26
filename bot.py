@@ -288,16 +288,18 @@ def report_members(bot, update, args):
 
 
 def remain(bot, update):
-    remaining = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
-    now = JalaliDatetime().strptime(' '.join(current_time()), '%Y-%m-%d %H%M%S')
-    step = now
-    for i in range(remaining):
-        if 3 <= step.hour <= 9:
-            step += timedelta(hours=step.hour - 9)
-        step += timedelta(minutes=11)
-    bot.send_message(chat_id=update.message.chat_id, text='{} remaining\nchannel will feed untill <b>{}</b>'.format(
-        remaining, step.strftime('%y-%m-%d > %H:%M <')), parse_mode='HTML')
-
+    try:
+        remaining = len(db_connect.execute("SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
+        now = JalaliDatetime().strptime(' '.join(current_time()), '%Y-%m-%d %H%M%S')
+        step = now
+        for i in range(remaining):
+            if 3 <= step.hour <= 9:
+                step += timedelta(hours=step.hour - 9)
+            step += timedelta(minutes=11)
+        bot.send_message(chat_id=update.message.chat_id, text='{} remaining\nchannel will feed untill <b>{}</b>'.format(
+            remaining, step.strftime('%y-%m-%d -> %H:%M')), parse_mode='HTML')
+    except Exception as E:
+        print(E)
 
 dp = updater.dispatcher
 updater.start_polling()
