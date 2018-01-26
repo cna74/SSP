@@ -21,7 +21,7 @@ try:
     channel_name = var.channel_name
     group_id = var.group_id
     kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
-    day = tuple(range(0, 6000, 100))
+    day = tuple(range(0, 6000, 1100))
 except Exception as E:
     print("didn't fetch variables")
     raise AttributeError
@@ -292,7 +292,7 @@ def remain(bot, update):
     now = JalaliDatetime().strptime(' '.join(current_time()), '%Y-%m-%d %H%M%S')
     step = now
     for i in range(remaining):
-        if 3 >= step.hour <= 9:
+        if 3 <= step.hour <= 9:
             step += timedelta(hours=step.hour - 9)
         step += timedelta(minutes=11)
     bot.send_message(chat_id=update.message.chat_id, text='{} remaining\nchannel will feed untill {}'.format(
