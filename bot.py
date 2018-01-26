@@ -296,7 +296,7 @@ def remain(bot, update):
             step += timedelta(hours=step.hour - 9)
         step += timedelta(minutes=11)
     bot.send_message(chat_id=update.message.chat_id, text='{} remaining\nchannel will feed untill <b>{}</b>'.format(
-        remaining, step.strftime('%Y-%m-%d %H:%M')), parse_mode='HTML')
+        remaining, step.strftime('%y-%m-%d > %H:%M <')), parse_mode='HTML')
 
 
 dp = updater.dispatcher
