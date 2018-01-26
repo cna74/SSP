@@ -305,44 +305,41 @@ updater.start_polling()
 print('started')
 
 
-def main():
-    dp.add_handler(CommandHandler('report', report_members, pass_args=True))
-    dp.add_handler(CommandHandler('remain', remain))
-    dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
-
-    if int(current_time()[1][2:]) == 0:
-        robot.send_message(chat_id=103086461, text=psutil.virtual_memory()[2])
-
-    if int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
-        send_to_ch()
-
-    elif int(current_time()[1]) == 25900:
-        robot.send_message(chat_id=channel_name,
-                           text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-        👉🏻 @Mmd_bt 👈🏻
-        شرایط در پی‌وی گفته میشه🍁
-        #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
-
-        برای پاسخگویی لطفا صبور باشید🤠
-
-        @crazymind3''')
-    elif 30000 < int(current_time()[1]) < 90000:
-        time.sleep(10)
-
-    if int(current_time()[1]) == 0:
-        mem = [robot.get_chat_members_count(channel_name)]
-        try:
-            last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
-        except IndexError:
-            last = mem[0]
-        last = last if last else mem
-        cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
-                       (current_time()[0], mem[0] - last[0], mem[0]))
-        db_connect.commit()
-
-    time.sleep(1)
-    main()
-
-
 if __name__ == '__main__':
-    main()
+    while True:
+        dp.add_handler(CommandHandler('report', report_members, pass_args=True))
+        dp.add_handler(CommandHandler('remain', remain))
+        dp.add_handler(MessageHandler(Filters.chat(group_id), save, edited_updates=True))
+
+        if int(current_time()[1][2:]) == 0:
+            robot.send_message(chat_id=103086461, text=psutil.virtual_memory()[2])
+
+        if int(current_time()[1][2:]) in day and not int(current_time()[1][2:]) == 0:
+            send_to_ch()
+
+        elif int(current_time()[1]) == 25900:
+            robot.send_message(chat_id=channel_name,
+                               text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+                👉🏻 @Mmd_bt 👈🏻
+                شرایط در پی‌وی گفته میشه🍁
+                #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
+
+                برای پاسخگویی لطفا صبور باشید🤠
+
+                @crazymind3''')
+
+        elif 30000 < int(current_time()[1]) < 90000:
+            time.sleep(10)
+
+        if int(current_time()[1]) == 0:
+            mem = [robot.get_chat_members_count(channel_name)]
+            try:
+                last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
+            except IndexError:
+                last = mem[0]
+            last = last if last else mem
+            cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
+                           (current_time()[0], mem[0] - last[0], mem[0]))
+            db_connect.commit()
+
+        time.sleep(1)
