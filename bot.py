@@ -293,13 +293,14 @@ def remain(bot, update):
         now = JalaliDatetime().strptime(' '.join(current_time()), '%Y-%m-%d %H%M%S')
         step = now
         for i in range(remaining):
-            if 3 <= step.hour <= 9:
-                step += timedelta(hours=step.hour - 9)
+            if 3 <= step.hour < 9:
+                step += timedelta(hours=9 - step.hour)
             step += timedelta(minutes=11)
         bot.send_message(chat_id=update.message.chat_id, text='{} remaining\nchannel will feed untill <b>{}</b>'.format(
             remaining, step.strftime('%y-%m-%d -> %H:%M')), parse_mode='HTML')
     except Exception as E:
         print(E)
+
 
 dp = updater.dispatcher
 updater.start_polling()
