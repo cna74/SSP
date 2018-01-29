@@ -303,6 +303,7 @@ class SSP:
                 else:
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
                              markersize=4)
+                plt.grid()
                 plt.xlabel('days')
                 plt.ylabel('members')
                 plt.title(title)
@@ -326,15 +327,15 @@ class SSP:
             now = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
             step = now
             minutes = str(self.day[1])[:-2]
+            for ـ in range(remaining):
+                if self.bed_time <= step.hour < self.wake_time:
+                    step += timedelta(hours=self.wake_time - step.hour)
+                step += timedelta(minutes=11)
             if remaining > 0:
                 text = '{} remaining\nchannel will feed untill <b>{}</b>'.format(
                                  remaining, step.strftime('%y-%m-%d -> %H:%M'))
             else:
                 text = '{} remaining'
-            for i in range(remaining):
-                if self.bed_time <= step.hour < self.wake_time:
-                    step += timedelta(hours=self.wake_time - step.hour)
-                step += timedelta(minutes=11)
             bot.send_message(chat_id=update.message.chat_id,
                              text=text, parse_mode='HTML')
         except Exception as E:
