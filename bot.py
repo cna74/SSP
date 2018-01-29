@@ -257,7 +257,7 @@ class SSP:
 
     def report_members(self, bot, update, args):
         try:
-            param = days = out = months = year = title = plus = predict = None
+            param = days = out = months = year = title = plus = predict = tmp = None
             if args:
                 param = str(args[0]).lower()
                 if re.fullmatch(r'd[0-9]*', param):
@@ -294,35 +294,29 @@ class SSP:
                 members = [i for i in [j[3] for j in out]]
                 balance = [i for i in [j[2] for j in out]]
                 average = sum(balance) / len(balance)
+                caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
+                    title, members[-1] - members[0], average, members[0], members[-1])
                 if plus:
                     now = self.robot.get_chat_members_count(self.channel_name)
                     balance.append(now - members[-1])
                     members.append(now)
                     if predict:
-                        tmp = members
-                        print(tmp)
+                        tmp = members.copy()
                         [tmp.append(int(tmp[-1] + average)) for _ in range(30 - len(members))]
-                        print(tmp)
-                        plt.plot(range(1, len(tmp) + 1), tmp, marker='o', linestyle='--', color='grey', markersize=4)
-                        plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-                        plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
-                    else:
-                        plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-                        plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
+                        plt.plot(range(1, len(tmp) + 1), tmp, marker='o', linestyle=' ', color='grey', markersize=4)
+                        caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict till this month = {}' \
+                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], tmp[-1])
+                    plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
+                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
                 else:
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
-                             markersize=4)
+                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue', markersize=4)
                 plt.grid()
                 plt.xlabel('days')
                 plt.ylabel('members')
                 plt.title(title)
                 plt.legend(loc=4)
                 plt.savefig('plot.png')
-                bot.send_photo(chat_id=update.message.chat_id,
-                               photo=open('plot.png', 'rb'),
-                               caption='{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-                                   title, members[-1] - members[0], average, members[0],
-                                   members[-1]))
+                bot.send_photo(chat_id=update.message.chat_id, photo=open('plot.png', 'rb'), caption=caption)
                 plt.close()
         except Exception as E:
             self.robot.send_message(chat_id=update.message.chat_id, text='**ERROR {}**'.format(update.message.text),
