@@ -15,6 +15,7 @@ matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
 kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
+sina, lili, fery = 103086461, 303962908, 319801025
 
 
 class SSP:
@@ -333,22 +334,22 @@ class SSP:
             step = now
             minutes = int(str(self.day[1])[:-2])
             for ـ in range(remaining):
-                if self.bed_time <= step.hour < self.wake_time:
-                    step += timedelta(hours=self.wake_time - step.hour)
+                if self.sleep(step.hour*10000):
+                    step += timedelta(hours=self.wake_time/10000 - step.hour)
                 step += timedelta(minutes=minutes)
             if remaining > 0:
                 text = '{} remaining\nchannel will feed untill <b>{}</b>'.format(
-                                 remaining, step.strftime('%y-%m-%d -> %H:%M'))
+                    remaining, step.strftime('%y-%m-%d -> %H:%M'))
             else:
-                text = '{} remaining'
+                text = '0 remaining'
             bot.send_message(chat_id=update.message.chat_id,
                              text=text, parse_mode='HTML')
         except Exception as E:
             print(E)
 
-    def sleep(self):
-        if int(self.current_time()[1]) > self.bed_time > self.wake_time < int(self.current_time()[1]) or \
-           int(self.current_time()[1]) > self.bed_time < self.wake_time > int(self.current_time()[1]):
+    def sleep(self, entry):
+        if int(entry) >= self.bed_time > self.wake_time < int(entry) or \
+           int(entry) >= self.bed_time < self.wake_time > int(entry):
             return True
         return False
 
@@ -372,17 +373,17 @@ class SSP:
 
         print('started')
         while True:
-            dp.add_handler(CommandHandler('report', self.report_members, pass_args=True))
-            dp.add_handler(CommandHandler('delay', self.set_delay, pass_args=True))
-            dp.add_handler(CommandHandler('bed', self.set_bed, pass_args=True))
-            dp.add_handler(CommandHandler('wake', self.set_wake, pass_args=True))
             dp.add_handler(CommandHandler('remain', self.remain))
+            dp.add_handler(CommandHandler('report', self.report_members, pass_args=True))
+            dp.add_handler(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
+            dp.add_handler(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
+            dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True,))
             dp.add_handler(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
 
             if int(self.current_time()[1][2:]) == 0:
-                self.robot.send_message(chat_id=103086461, text=psutil.virtual_memory()[2])
+                self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
-            elif self.sleep():
+            elif self.sleep(self.current_time()[1]):
                     pass
 
             elif int(self.current_time()[1][2:]) in self.day and not int(self.current_time()[1][2:]) == 0:
