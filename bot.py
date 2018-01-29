@@ -257,7 +257,7 @@ class SSP:
 
     def report_members(self, bot, update, args):
         try:
-            param = days = out = months = year = title = plus = None
+            param = days = out = months = year = title = plus = predict = None
             if args:
                 param = str(args[0]).lower()
                 if re.fullmatch(r'd[0-9]*', param):
@@ -272,7 +272,7 @@ class SSP:
                     out = self._before(year, months)
                     title = 'graph of {}-{}'.format(year, months)
                     if year + months == str(self.current_time()[0].replace('-', '')[:6]):
-                        plus = True
+                        plus = predict = True
                 elif re.fullmatch(r'y[0-9]*', param):
                     year = '13' + param[1:] if len(param) == 3 else param[1:]
                     out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%'".format(year))]
@@ -293,13 +293,22 @@ class SSP:
             if out:
                 members = [i for i in [j[3] for j in out]]
                 balance = [i for i in [j[2] for j in out]]
+                average = sum(balance) / len(balance)
                 if plus:
                     now = self.robot.get_chat_members_count(self.channel_name)
                     balance.append(now - members[-1])
                     members.append(now)
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
-                             markersize=4)
+                    if predict:
+                        tmp = members
+                        print(tmp)
+                        [tmp.append(int(tmp[-1] + average)) for _ in range(30 - len(members))]
+                        pprint(tmp)
+                        plt.plot(range(1, len(tmp) + 1), tmp, marker='o', linestyle='--', color='grey', markersize=4)
+                        plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
+                        plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
+                    else:
+                        plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
+                        plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
                 else:
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
                              markersize=4)
@@ -312,7 +321,7 @@ class SSP:
                 bot.send_photo(chat_id=update.message.chat_id,
                                photo=open('plot.png', 'rb'),
                                caption='{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-                                   title, members[-1] - members[0], sum(balance) / len(balance), members[0],
+                                   title, members[-1] - members[0], average, members[0],
                                    members[-1]))
                 plt.close()
         except Exception as E:
@@ -326,11 +335,11 @@ class SSP:
                 "SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
             now = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
             step = now
-            minutes = str(self.day[1])[:-2]
+            minutes = int(str(self.day[1])[:-2])
             for ـ in range(remaining):
                 if self.bed_time <= step.hour < self.wake_time:
                     step += timedelta(hours=self.wake_time - step.hour)
-                step += timedelta(minutes=11)
+                step += timedelta(minutes=minutes)
             if remaining > 0:
                 text = '{} remaining\nchannel will feed untill <b>{}</b>'.format(
                                  remaining, step.strftime('%y-%m-%d -> %H:%M'))
