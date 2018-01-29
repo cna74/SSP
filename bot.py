@@ -313,7 +313,7 @@ class SSP:
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue', markersize=4)
                 plt.grid()
                 plt.xlim(0,)
-                plt.ylim(0,)
+                plt.ylim(members[0],)
                 plt.xlabel('days')
                 plt.ylabel('members')
                 plt.title(title)
