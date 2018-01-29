@@ -300,7 +300,9 @@ class SSP:
                     members.append(now)
                     if predict:
                         tmp = members
+                        print(tmp)
                         [tmp.append(int(tmp[-1] + average)) for _ in range(30 - len(members))]
+                        print(tmp)
                         plt.plot(range(1, len(tmp) + 1), tmp, marker='o', linestyle='--', color='grey', markersize=4)
                         plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
                         plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
