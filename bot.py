@@ -300,6 +300,8 @@ class SSP:
                     now = self.robot.get_chat_members_count(self.channel_name)
                     balance.append(now - members[-1])
                     members.append(now)
+                    caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
+                        title, members[-1] - members[0], average, members[0], members[-1])
                     if predict:
                         tmp = members.copy()
                         [tmp.append(int(tmp[-1] + average)) for _ in range(30 - len(members))]
