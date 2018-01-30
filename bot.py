@@ -14,7 +14,6 @@ import re
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
-kind, text, edited, sent, ch_a = 2, 4, 7, 8, 9
 sina, lili, fery = 103086461, 303962908, 319801025
 
 
@@ -158,10 +157,10 @@ class SSP:
             if ue:
                 gp_id = ue.message_id
                 out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
-                if ue.text and out[ch_a] == 1:
+                if ue.text and out[9] == 1:
                     text = self.id_remove(ue.text)
                     self.robot.edit_message_text(chat_id=self.channel_name, message_id=out[6], text=text)
-                elif ue.caption and out[ch_a] == 1:
+                elif ue.caption and out[9] == 1:
                     text = self.id_remove(ue.caption)
                     self.robot.edit_message_caption(chat_id=self.channel_name, message_id=out[6], caption=text)
                 elif ue.text:
@@ -212,9 +211,9 @@ class SSP:
             caption NOT LIKE '.%' AND 
             caption NOT LIKE '/%' 
             ORDER BY ID LIMIT 1""")][0]
-            cp = self.id_remove(out[text])
-            if out[edited] == 1 and out[sent] == 0 and out[ch_a] == 1:
-                if out[kind] == 'text':
+            cp = self.id_remove(out[4])
+            if out[7] == 1 and out[8] == 0 and out[9] == 1:
+                if out[2] == 'text':
                     self.robot.edit_message_text(chat_id=self.channel_name, text=cp, message_id=out[5])
                     cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                     db_connect.commit()
@@ -222,25 +221,25 @@ class SSP:
                     self.robot.edit_message_caption(chat_id=self.channel_name, caption=cp, message_id=out[5])
                     cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                     db_connect.commit()
-            elif out[sent] == 0 or out[ch_a] == 0:
+            elif out[8] == 0 or out[9] == 0:
                 ch = None
-                if out[kind] == 'text':
+                if out[2] == 'text':
                     ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
-                elif out[kind] == 'video':
+                elif out[2] == 'video':
                     ch = self.robot.send_video(chat_id=self.channel_name, video=out[3], caption=cp).message_id
-                elif out[kind] == 'photo':
-                    cap = self.put(out[3], out[text])
+                elif out[2] == 'photo':
+                    cap = self.put(out[3], out[4])
                     ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('out.jpg', 'rb'),
                                                caption=cap).message_id
-                elif out[kind] == 'audio':
+                elif out[2] == 'audio':
                     ch = self.robot.send_audio(chat_id=self.channel_name, audio=out[3], caption=cp).message_id
-                elif out[kind] == 'document':
+                elif out[2] == 'document':
                     ch = self.robot.send_document(chat_id=self.channel_name, document=out[3], caption=cp).message_id
-                elif out[kind] == 'v_note':
+                elif out[2] == 'v_note':
                     ch = self.robot.send_video_note(chat_id=self.channel_name, video_note=out[3]).message_id
-                elif out[kind] == 'voice':
+                elif out[2] == 'voice':
                     ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
-                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
+                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()),)
         except IndexError:
             pass
         except Exception as E:
@@ -384,7 +383,7 @@ class SSP:
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
             elif self.sleep(self.current_time()[1]):
-                    pass
+                pass
 
             elif int(self.current_time()[1][2:]) in self.day and not int(self.current_time()[1][2:]) == 0:
                 self.send_to_ch()
@@ -403,7 +402,7 @@ class SSP:
             if int(self.current_time()[1]) == 0:
                 self.add_member()
 
-            time.sleep(1)
+            time.sleep(10)
 
 
 timer = SSP(var.TOKEN)
