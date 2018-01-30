@@ -404,7 +404,7 @@ class SSP:
             if int(self.current_time()[1]) == 0:
                 self.add_member()
 
-            time.sleep(10)
+            time.sleep(1)
 
 
 timer = SSP(var.TOKEN)
