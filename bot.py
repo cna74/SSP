@@ -300,6 +300,7 @@ class SSP:
                     now = self.robot.get_chat_members_count(self.channel_name)
                     balance.append(now - members[-1])
                     members.append(now)
+                    average = sum(balance) / len(balance)
                     caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
                         title, members[-1] - members[0], average, members[0], members[-1])
                     if predict:
@@ -391,8 +392,7 @@ class SSP:
                 self.send_to_ch()
 
             elif int(self.current_time()[1]) == self.bed_time - 4100:
-                self.robot.send_message(chat_id=self.channel_name,
-                                        text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+                self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
                     #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
