@@ -1,4 +1,4 @@
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from telegram.ext import Updater, MessageHandler, CommandHandler, JobQueue, Filters, Job
 from khayyam import JalaliDate, JalaliDatetime
 from datetime import datetime, timedelta
 from pprint import pprint
@@ -382,16 +382,19 @@ class SSP:
             dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True,))
             dp.add_handler(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
 
-            if int(self.current_time()[1][2:]) == 0:
+            t1 = int(self.current_time()[1][2:])
+            t2 = int(self.current_time()[1])
+
+            if t1 == 0:
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
             elif self.sleep(self.current_time()[1]):
                 pass
 
-            elif int(self.current_time()[1][2:]) in self.day and not int(self.current_time()[1][2:]) == 0:
+            elif t1 in self.day and not t1 == 0:
                 self.send_to_ch()
 
-            elif int(self.current_time()[1]) == self.bed_time - 4100:
+            elif t2 == self.bed_time - 4100:
                 self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
@@ -401,9 +404,10 @@ class SSP:
 
                     @crazymind3''')
 
-            if int(self.current_time()[1]) == 0:
+            if t2 == 0:
                 self.add_member()
-
+            
+            del t1, t2
             time.sleep(1)
 
 
