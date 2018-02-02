@@ -23,7 +23,7 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.day = tuple(range(0, 6000, 1100))
+        self.day = tuple(range(0, 60, 11))
         self.bed_time = 30000
         self.wake_time = 90000
 
@@ -33,8 +33,8 @@ class SSP:
                 entry = str(args[0])
                 if entry.isdecimal():
                     if 0 < int(entry) < 60:
-                        entry = int(entry) * 100
-                        self.day = tuple(range(0, 6000, entry))
+                        entry = int(entry)
+                        self.day = tuple(range(0, 60, entry))
                         bot.send_message(chat_id=update.message.chat_id,
                                          text='delay = <b>{}</b> minute'.format(args[0]),
                                          parse_mode='HTML')
@@ -48,7 +48,7 @@ class SSP:
                 if -1 < int(entry) < 25:
                     if 0 < len(entry) < 3:
                         bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                         text='<b>bed</b> time starts from <b>{}</b>'.format(args[0]))
+                                         text='<b>bed</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
                         self.bed_time = int(entry) * 10000
         except Exception as E:
             bot.send_message(chat_id=update.message.chat_id, text='ERROR')
@@ -60,7 +60,7 @@ class SSP:
                 if -1 < int(entry) < 25:
                     if 0 < len(entry) < 3:
                         bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                         text='<b>wake</b> time starts from <b>{}</b>'.format(args[0]))
+                                         text='<b>wake</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
                         self.wake_time = int(entry) * 10000
         except Exception as E:
             bot.send_message(chat_id=update.message.chat_id, text='ERROR')
@@ -305,10 +305,9 @@ class SSP:
                         title, members[-1] - members[0], average, members[0], members[-1])
                     if predict:
                         tmp = members.copy()
-                        [tmp.append(int(tmp[-1] + average)) for _ in range(30 - len(members))]
-                        plt.plot(range(1, len(tmp) + 1), tmp, marker='o', linestyle=' ', label='predict', color='grey', markersize=4)
-                        caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict till this month = {}' \
-                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], tmp[-1])
+                        [tmp.append(tmp[-1] + average) for _ in range(30 - len(members))]
+                        caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict of month = {}' \
+                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], int(tmp[-1]))
 
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
                     plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
@@ -334,8 +333,8 @@ class SSP:
                 "SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
             now = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
             step = now
-            minutes = int(str(self.day[1])[:-2])
-            for ـ in range(remaining):
+            minutes = int(str(self.day[1]))
+            for _ in range(remaining):
                 if self.sleep(step.hour*10000):
                     step += timedelta(hours=self.wake_time/10000 - step.hour)
                 step += timedelta(minutes=minutes)
@@ -344,12 +343,12 @@ class SSP:
                     remaining, step.strftime('%y-%m-%d -> %H:%M'))
             else:
                 text = '0 remaining'
-            bot.send_message(chat_id=update.message.chat_id,
-                             text=text, parse_mode='HTML')
+            bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
         except Exception as E:
-            print(E)
+            print(9009, E)
 
-    def sleep(self, entry):
+    def sleep(self, entry=None):
+        entry = self.current_time()[1] if not entry else entry
         if int(entry) >= self.bed_time > self.wake_time < int(entry) or \
            int(entry) >= self.bed_time < self.wake_time > int(entry):
             return True
@@ -369,8 +368,30 @@ class SSP:
         except Exception as E:
             print("Mem_count didn't updated")
 
+    def task(self, bot, job):
+        try:
+            t1 = self.current_time()[1]
+            if int(t1[2:4]) in self.day and not int(t1[2:4]) == 0 and not self.sleep():
+                self.send_to_ch()
+            elif int(t1[2:4]) == 0:
+                self.robot.send_message(chat_id=self.group_id, text=psutil.virtual_memory()[2])
+            if t1 == str(self.bed_time)[:3]:
+                self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+                                    👉🏻 @Mmd_bt 👈🏻
+                                    شرایط در پی‌وی گفته میشه🍁
+                                    #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
+
+                                    برای پاسخگویی لطفا صبور باشید🤠
+
+                                    @crazymind3''')
+            if int(t1) == 0:
+                self.add_member()
+        except Exception as E:
+            print(E)
+
     def start(self):
         dp = self.updater.dispatcher
+        j = self.updater.job_queue
         self.updater.start_polling()
 
         print('started')
@@ -378,37 +399,37 @@ class SSP:
         dp.add_handler(CommandHandler('report', self.report_members, pass_args=True))
         dp.add_handler(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
         dp.add_handler(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
-        dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True,))
+        dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True))
         dp.add_handler(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
-
-        while True:
-            t1 = int(self.current_time()[1][2:])
-            t2 = int(self.current_time()[1])
-
-            if t1 == 0:
-                self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
-
-            elif self.sleep(self.current_time()[1]):
-                pass
-
-            elif t1 in self.day and not t1 == 0:
-                self.send_to_ch()
-
-            elif t2 == self.bed_time - 4100:
-                self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-                    👉🏻 @Mmd_bt 👈🏻
-                    شرایط در پی‌وی گفته میشه🍁
-                    #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
-
-                    برای پاسخگویی لطفا صبور باشید🤠
-
-                    @crazymind3''')
-
-            if t2 == 0:
-                self.add_member()
-
-            del t1, t2
-            time.sleep(1)
+        j.run_repeating(callback=self.task, interval=60, first=0)
+        # j.run_daily(callback=self.tabdol, time=datetime())
+        # while True:
+        #     t1 = int(self.current_time()[1][2:])
+        #     t2 = int(self.current_time()[1])
+        #
+        #     if t1 == 0:
+        #         self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
+        #
+        #     elif self.sleep(self.current_time()[1]):
+        #         pass
+        #
+        #     elif t1 in self.day and not t1 == 0:
+        #         self.send_to_ch()
+        #
+        #     elif t2 == self.bed_time - 4100:
+        # self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+        #             👉🏻 @Mmd_bt 👈🏻
+        #             شرایط در پی‌وی گفته میشه🍁
+        #             #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
+        #
+        #             برای پاسخگویی لطفا صبور باشید🤠
+        #
+        #             @crazymind3''')
+        #
+        #     if t2 == 0:
+        #         self.add_member()
+        #
+        #     time.sleep(1)
 
 
 timer = SSP(var.TOKEN)
