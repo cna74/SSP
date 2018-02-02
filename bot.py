@@ -339,7 +339,7 @@ class SSP:
                     step += timedelta(hours=self.wake_time/10000 - step.hour)
                 step += timedelta(minutes=minutes)
             if remaining > 0:
-                text = '{} remaining\nchannel will feed untill <b>{}</b>'.format(
+                text = '{} remaining\nchannel will feed until <b>{}</b>'.format(
                     remaining, step.strftime('%y-%m-%d -> %H:%M'))
             else:
                 text = '0 remaining'
@@ -377,13 +377,13 @@ class SSP:
                 self.robot.send_message(chat_id=self.group_id, text=psutil.virtual_memory()[2])
             if t1 == str(self.bed_time)[:3]:
                 self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-                                    👉🏻 @Mmd_bt 👈🏻
-                                    شرایط در پی‌وی گفته میشه🍁
-                                    #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
+                    👉🏻 @Mmd_bt 👈🏻
+                    شرایط در پی‌وی گفته میشه🍁
+                    #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
 
-                                    برای پاسخگویی لطفا صبور باشید🤠
+                    برای پاسخگویی لطفا صبور باشید🤠
 
-                                    @crazymind3''')
+                    @crazymind3''')
             if int(t1) == 0:
                 self.add_member()
         except Exception as E:
