@@ -374,14 +374,14 @@ class SSP:
         self.updater.start_polling()
 
         print('started')
-        while True:
-            dp.add_handler(CommandHandler('remain', self.remain))
-            dp.add_handler(CommandHandler('report', self.report_members, pass_args=True))
-            dp.add_handler(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
-            dp.add_handler(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
-            dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True,))
-            dp.add_handler(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
+        dp.add_handler(CommandHandler('remain', self.remain))
+        dp.add_handler(CommandHandler('report', self.report_members, pass_args=True))
+        dp.add_handler(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
+        dp.add_handler(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
+        dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True,))
+        dp.add_handler(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
 
+        while True:
             t1 = int(self.current_time()[1][2:])
             t2 = int(self.current_time()[1])
 
@@ -406,7 +406,7 @@ class SSP:
 
             if t2 == 0:
                 self.add_member()
-            
+
             del t1, t2
             time.sleep(1)
 
