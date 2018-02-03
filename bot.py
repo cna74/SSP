@@ -329,10 +329,10 @@ class SSP:
     def remain(self, bot, update):
         try:
             remaining = len(db_connect.execute(
-                "SELECT ID FROM Queue WHERE sent = 0 and caption not like '.%' and caption not like '/%'").fetchall())
+                "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
             now = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
             step = now
-            minutes = int(str(self.day[1]))
+            minutes = int(self.day[1])
             for _ in range(remaining):
                 if self.sleep(step.hour*10000):
                     step += timedelta(hours=self.wake_time/10000 - step.hour)
@@ -370,12 +370,15 @@ class SSP:
     def task(self, bot, job):
         try:
             t1 = self.current_time()[1]
-            if int(t1[2:4]) in self.day and not int(t1[2:4]) == 0 and not self.sleep():
+            if int(t1[-4:-2]) in self.day and not int(t1[-4:-2]) == 0 and not self.sleep():
+                print(1)
                 self.send_to_ch()
-            elif int(t1[2:4]) == 0:
+            elif int(t1[-4:-2]) == 0:
+                print(2)
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
-            if int(t1[:4]) == int(str(self.bed_time)[:-2]):
+            if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
+                print(3)
                 self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
@@ -385,7 +388,7 @@ class SSP:
 
                     @crazymind3''')
 
-            if int(t1[:4]) == 0:
+            if int(t1[:-2]) == 0:
                 self.add_member()
         except Exception as E:
             print(E)
