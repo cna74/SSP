@@ -304,10 +304,11 @@ class SSP:
                     caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
                         title, members[-1] - members[0], average, members[0], members[-1])
                     if predict:
-                        tmp = members.copy()
-                        [tmp.append(tmp[-1] + average) for _ in range(30 - len(members))]
+                        # tmp = members.copy()
+                        # [tmp.append(tmp[-1] + average) for _ in range(30 - len(members))]
+                        p = int(members[-1] + (average * (30 - len(members))))
                         caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict of month = {}' \
-                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], int(tmp[-1]))
+                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], p)
 
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
                     plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
