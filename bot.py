@@ -304,7 +304,7 @@ class SSP:
                     caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
                         title, members[-1] - members[0], average, members[0], members[-1])
                     if predict:
-                        pdt = int(members[-1] + (average * (30 - len(members))))
+                        pdt = int(members[-1] + (average * (30 - len(members) - 1)))
                         caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict of month = {}' \
                                   ''.format(title, members[-1] - members[0], average, members[0], members[-1], pdt)
 
