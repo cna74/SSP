@@ -1,4 +1,4 @@
-from telegram.ext import Updater, MessageHandler, CommandHandler, JobQueue, Filters, Job
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from khayyam import JalaliDate, JalaliDatetime
 from datetime import datetime, timedelta
 from pprint import pprint
@@ -373,9 +373,9 @@ class SSP:
             t1 = self.current_time()[1]
             if int(t1[2:4]) in self.day and not int(t1[2:4]) == 0 and not self.sleep():
                 self.send_to_ch()
-            elif int(t1[2:4]) == 0:
-                self.robot.send_message(chat_id=self.group_id, text=psutil.virtual_memory()[2])
-            if t1 == str(self.bed_time)[:3]:
+            elif int(t1[:4]) == 0:
+                self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
+            if int(t1[:4]) == 1217:
                 self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
@@ -384,7 +384,7 @@ class SSP:
                     برای پاسخگویی لطفا صبور باشید🤠
 
                     @crazymind3''')
-            if int(t1) == 0:
+            if int(t1[:4]) == 2359:
                 self.add_member()
         except Exception as E:
             print(E)
