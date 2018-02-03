@@ -390,46 +390,19 @@ class SSP:
             print(E)
 
     def start(self):
-        dp = self.updater.dispatcher
+        dpa = self.updater.dispatcher.add_handler
         j = self.updater.job_queue
         self.updater.start_polling()
 
         print('started')
-        dp.add_handler(CommandHandler('remain', self.remain))
-        dp.add_handler(CommandHandler('report', self.report_members, pass_args=True))
-        dp.add_handler(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
-        dp.add_handler(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
-        dp.add_handler(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True))
-        dp.add_handler(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
+        dpa(CommandHandler('remain', self.remain))
+        dpa(CommandHandler('report', self.report_members, pass_args=True))
+        dpa(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
+        dpa(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
+        dpa(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True))
+        dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
         j.run_repeating(callback=self.task, interval=60, first=0)
-        # j.run_daily(callback=self.tabdol, time=datetime())
-        # while True:
-        #     t1 = int(self.current_time()[1][2:])
-        #     t2 = int(self.current_time()[1])
-        #
-        #     if t1 == 0:
-        #         self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
-        #
-        #     elif self.sleep(self.current_time()[1]):
-        #         pass
-        #
-        #     elif t1 in self.day and not t1 == 0:
-        #         self.send_to_ch()
-        #
-        #     elif t2 == self.bed_time - 4100:
-        # self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-        #             👉🏻 @Mmd_bt 👈🏻
-        #             شرایط در پی‌وی گفته میشه🍁
-        #             #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
-        #
-        #             برای پاسخگویی لطفا صبور باشید🤠
-        #
-        #             @crazymind3''')
-        #
-        #     if t2 == 0:
-        #         self.add_member()
-        #
-        #     time.sleep(1)
+        self.updater.idle()
 
 
 timer = SSP(var.TOKEN)
