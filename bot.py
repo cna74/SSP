@@ -304,11 +304,9 @@ class SSP:
                     caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
                         title, members[-1] - members[0], average, members[0], members[-1])
                     if predict:
-                        # tmp = members.copy()
-                        # [tmp.append(tmp[-1] + average) for _ in range(30 - len(members))]
-                        p = int(members[-1] + (average * (30 - len(members))))
+                        pdt = int(members[-1] + (average * (30 - len(members))))
                         caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict of month = {}' \
-                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], p)
+                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], pdt)
 
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
                     plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
@@ -374,9 +372,10 @@ class SSP:
             t1 = self.current_time()[1]
             if int(t1[2:4]) in self.day and not int(t1[2:4]) == 0 and not self.sleep():
                 self.send_to_ch()
-            elif int(t1[:4]) == 0:
+            elif int(t1[2:4]) == 0:
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
-            if int(t1[:4]) == 1217:
+
+            if int(t1[:4]) == int(str(self.bed_time)[:-2]):
                 self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
@@ -385,7 +384,8 @@ class SSP:
                     برای پاسخگویی لطفا صبور باشید🤠
 
                     @crazymind3''')
-            if int(t1[:4]) == 2359:
+
+            if int(t1[:4]) == 0:
                 self.add_member()
         except Exception as E:
             print(E)
