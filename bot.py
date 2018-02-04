@@ -371,14 +371,11 @@ class SSP:
         try:
             t1 = self.current_time()[1]
             if int(t1[-4:-2]) in self.day and not int(t1[-4:-2]) == 0 and not self.sleep():
-                print(1)
                 self.send_to_ch()
             elif int(t1[-4:-2]) == 0:
-                print(2)
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
             if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
-                print(3)
                 self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
