@@ -23,7 +23,7 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.day = tuple(range(0, 60, 1))
+        self.day = tuple(range(0, 60, 11))
         self.bed_time = 30000
         self.wake_time = 90000
 
