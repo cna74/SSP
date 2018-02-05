@@ -23,7 +23,7 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.day = tuple(range(0, 60, 11))
+        self.delay = tuple(range(0, 60, 11))
         self.bed_time = 30000
         self.wake_time = 90000
 
@@ -32,9 +32,9 @@ class SSP:
             if args:
                 entry = str(args[0])
                 if entry.isdecimal():
-                    if 0 < int(entry) < 60:
+                    if 1 <= int(entry) < 60:
                         entry = int(entry)
-                        self.day = tuple(range(0, 60, entry))
+                        self.delay = tuple(range(0, 60, entry))
                         bot.send_message(chat_id=update.message.chat_id,
                                          text='delay = <b>{}</b> minute'.format(args[0]),
                                          parse_mode='HTML')
@@ -45,11 +45,10 @@ class SSP:
         try:
             if args:
                 entry = str(args[0])
-                if -1 < int(entry) < 25:
-                    if 0 < len(entry) < 3:
-                        bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                         text='<b>bed</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
-                        self.bed_time = int(entry) * 10000
+                if 0 <= int(entry) < 24:
+                    bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
+                                     text='<b>bed</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
+                    self.bed_time = int(entry) * 10000
         except Exception as E:
             bot.send_message(chat_id=update.message.chat_id, text='ERROR')
 
@@ -57,11 +56,10 @@ class SSP:
         try:
             if args:
                 entry = str(args[0])
-                if -1 < int(entry) < 25:
-                    if 0 < len(entry) < 3:
-                        bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                         text='<b>wake</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
-                        self.wake_time = int(entry) * 10000
+                if 0 <= int(entry) < 24:
+                    bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
+                                     text='<b>wake</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
+                    self.wake_time = int(entry) * 10000
         except Exception as E:
             bot.send_message(chat_id=update.message.chat_id, text='ERROR')
 
@@ -254,6 +252,12 @@ class SSP:
                 "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
         return out
 
+    def state(self, bot, update):
+        self.robot.send_message(chat_id=update.message.chat_id,
+                                text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
+                                    self.delay[1], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
+                                parse_mode='HTML')
+
     def report_members(self, bot, update, args):
         try:
             param = days = out = months = year = title = plus = predict = tmp = None
@@ -331,7 +335,7 @@ class SSP:
                 "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
             now = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
             step = now
-            minutes = int(self.day[1])
+            minutes = int(self.delay[1])
             for _ in range(remaining):
                 if self.sleep(step.hour*10000):
                     step += timedelta(hours=self.wake_time/10000 - step.hour)
@@ -369,7 +373,7 @@ class SSP:
     def task(self, bot, job):
         try:
             t1 = self.current_time()[1]
-            if int(t1[-4:-2]) in self.day and not int(t1[-4:-2]) == 0 and not self.sleep():
+            if int(t1[-4:-2]) in self.delay and not int(t1[-4:-2]) == 0 and not self.sleep():
                 self.send_to_ch()
             elif int(t1[-4:-2]) == 0:
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
@@ -397,6 +401,7 @@ class SSP:
         print('started')
         dpa(CommandHandler('remain', self.remain))
         dpa(CommandHandler('report', self.report_members, pass_args=True))
+        dpa(CommandHandler('state', self.state, Filters.user([sina, lili, fery])))
         dpa(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True))
