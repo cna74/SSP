@@ -260,7 +260,7 @@ class SSP:
 
     def report_members(self, bot, update, args):
         try:
-            param = days = out = months = year = title = plus = predict = tmp = None
+            param = days = out = months = year = title = plus = predict = None
             if args:
                 param = str(args[0]).lower()
                 if re.fullmatch(r'd[0-9]*', param):
