@@ -23,7 +23,7 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.day = tuple(range(0, 60, 11))
+        self.day = tuple(range(0, 60, 1))
         self.bed_time = 30000
         self.wake_time = 90000
 
@@ -77,6 +77,11 @@ class SSP:
     def id_remove(self, entry):
         pattern = re.compile(r'(@\S+)', re.I)
         pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
+        pattern2 = re.compile(r'https://.*')
+        if re.search(pattern2, entry):
+            link = re.findall(pattern2, entry)
+            for i in link:
+                entry = entry.replace(i, '')
         if re.search(pattern1, entry):
             logo = re.findall(pattern1, entry)[0]
             entry = re.sub(pattern1, '', entry)
