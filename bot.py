@@ -112,14 +112,8 @@ class SSP:
             if not coor == 'no':
                 lg = Image.open('CC.png')
                 res, lg_sz = bg.size, lg.size
-                def_l, def_p, box_def, n_def = (4000, 1100), (1100, 4000), (3500, 3500), None
-                if res[0] > res[1]:
-                    n_def = [int((lg_sz[0] * res[0]) / def_l[0]), int((lg_sz[1] * res[1]) / def_l[1])]
-                elif res[0] == res[1]:
-                    if not res == box_def:
-                        n_def = [int((lg_sz[0] * res[0]) / box_def[0]), int((lg_sz[1] * res[1]) / box_def[1])]
-                else:
-                    n_def = [int((lg_sz[0] * res[0]) / def_p[0]), int((lg_sz[1] * res[1]) / def_p[1])]
+                box_def = (3500, 3500)
+                n_def = [int((lg_sz[0] * res[0]) / box_def[0]), int((lg_sz[1] * res[1]) / box_def[1])]
 
                 lg.thumbnail(n_def, Image.ANTIALIAS)
                 lg_sz = lg.size
