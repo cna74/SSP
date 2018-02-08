@@ -75,7 +75,7 @@ class SSP:
     def id_remove(self, entry):
         pattern = re.compile(r'(@\S+)', re.I)
         pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
-        pattern2 = re.compile(r'https://.*')
+        pattern2 = re.compile(r'https://t\.me\S*')
         if re.search(pattern2, entry):
             link = re.findall(pattern2, entry)
             for i in link:
@@ -388,6 +388,18 @@ class SSP:
 
                     @crazymind3''')
 
+            if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 10:
+                self.robot.send_message(chat_id=self.channel_name, text='''⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
+
+💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
+
+✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده؛ حتی روندِ رشدِ ممبرهامون هم تغییرِ چشمگیری کرد
+
+ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
+با این ایدی برای ربات درتماس باشید 
+@s_for_cna
+💯به 5نفرِ اول که ربات رو اجاره کنند تخفیف داده میشه''')
+
             if int(t1[:-2]) == 0:
                 self.add_member()
         except Exception as E:
@@ -399,8 +411,8 @@ class SSP:
         self.updater.start_polling()
 
         print('started')
-        dpa(CommandHandler('remain', self.remain))
-        dpa(CommandHandler('report', self.report_members, pass_args=True))
+        dpa(CommandHandler('remain', self.remain, Filters.user([sina, lili, fery])))
+        dpa(CommandHandler('report', self.report_members, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('state', self.state, Filters.user([sina, lili, fery])))
         dpa(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
