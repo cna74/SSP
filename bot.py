@@ -89,7 +89,7 @@ class SSP:
             for state in state:
                 if state.lower() not in ('@crazymind3', '@mmd_bt'):
                     entry = re.sub(state, '@CrazyMind3', entry)
-            if entry.lower().strip()[len(self.channel_name)*(-2):].find('@crazymind3') == -1:
+            if entry.lower().strip()[len(self.channel_name) * (-2):].find('@crazymind3') == -1:
                 entry = entry + '\n@CrazyMind3'
             return entry
         else:
@@ -236,7 +236,7 @@ class SSP:
                     ch = self.robot.send_video_note(chat_id=self.channel_name, video_note=out[3]).message_id
                 elif out[2] == 'voice':
                     ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
-                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()),)
+                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
         except IndexError:
             pass
         except Exception as E:
@@ -253,10 +253,10 @@ class SSP:
         return out
 
     def state(self, bot, update):
-        self.robot.send_message(chat_id=update.message.chat_id,
-                                text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
-                                    self.delay[1], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
-                                parse_mode='HTML')
+        bot.send_message(chat_id=update.message.chat_id,
+                         text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
+                             self.delay[1], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
+                         parse_mode='HTML')
 
     def report_members(self, bot, update, args):
         try:
@@ -265,7 +265,8 @@ class SSP:
                 param = str(args[0]).lower()
                 if re.fullmatch(r'd[0-9]*', param):
                     days = param[1:]
-                    out = [i for i in db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
+                    out = [i for i in
+                           db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
                     out = [j for j in reversed(out)]
                     title = '{} days'.format(days)
                     plus = True
@@ -312,11 +313,13 @@ class SSP:
                                   ''.format(title, members[-1] - members[0], average, members[0], members[-1], pdt)
 
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue', markersize=4)
+                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
+                             markersize=4)
                 else:
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue', markersize=4)
+                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
+                             markersize=4)
                 plt.grid()
-                plt.xlim(1,)
+                plt.xlim(1, )
                 plt.xlabel('days')
                 plt.ylabel('members')
                 plt.title(title)
@@ -333,14 +336,18 @@ class SSP:
         try:
             remaining = len(db_connect.execute(
                 "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
-            now = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
-            step = now
-            minutes = int(self.delay[1])
-            for _ in range(remaining):
-                if self.sleep(step.hour*10000):
-                    step += timedelta(hours=self.wake_time/10000 - step.hour)
-                step += timedelta(minutes=minutes)
-            if remaining > 0:
+            step = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
+
+            flag = True if remaining > 0 else False
+
+            while remaining > 0:
+                if self.sleep(step.hour * 10000):
+                    step += timedelta(hours=self.wake_time / 10000 - step.hour)
+                if step.minute in self.delay and not step.minute == 0:
+                    remaining -= 1
+                step += timedelta(minutes=1)
+
+            if flag:
                 text = '{} remaining\nchannel will feed until <b>{}</b>'.format(
                     remaining, step.strftime('%y-%m-%d -> %H:%M'))
             else:
@@ -352,7 +359,7 @@ class SSP:
     def sleep(self, entry=None):
         entry = self.current_time()[1] if not entry else entry
         if int(entry) >= self.bed_time > self.wake_time < int(entry) or \
-           int(entry) >= self.bed_time < self.wake_time > int(entry):
+                                        int(entry) >= self.bed_time < self.wake_time > int(entry):
             return True
         return False
 
