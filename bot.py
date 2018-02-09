@@ -338,7 +338,7 @@ class SSP:
                 "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
             step = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
 
-            flag = True if remaining > 0 else False
+            rem = remaining
 
             while remaining > 0:
                 if self.sleep(step.hour * 10000):
@@ -347,9 +347,9 @@ class SSP:
                     remaining -= 1
                 step += timedelta(minutes=1)
 
-            if flag:
+            if rem > 0:
                 text = '{} remaining\nchannel will feed until <b>{}</b>'.format(
-                    remaining, step.strftime('%y-%m-%d -> %H:%M'))
+                    rem, step.strftime('%y-%m-%d -> %H:%M'))
             else:
                 text = '0 remaining'
             bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
