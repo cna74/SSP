@@ -23,7 +23,7 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.delay = tuple(range(0, 60, 11))
+        self.delay = tuple(range(11, 60, 11))
         self.bed_time = 30000
         self.wake_time = 90000
 
@@ -34,7 +34,10 @@ class SSP:
                 if entry.isdecimal():
                     if 1 <= int(entry) < 60:
                         entry = int(entry)
-                        self.delay = tuple(range(0, 60, entry))
+                        if entry % 5 == 0 and entry <= 30:
+                            self.delay = tuple(range(0, 60, entry))
+                        else:
+                            self.delay = tuple(range(entry, 60, entry))
                         bot.send_message(chat_id=update.message.chat_id,
                                          text='delay = <b>{}</b> minute'.format(args[0]),
                                          parse_mode='HTML')
@@ -255,7 +258,7 @@ class SSP:
     def state(self, bot, update):
         bot.send_message(chat_id=update.message.chat_id,
                          text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
-                             self.delay[1], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
+                             self.delay[1] - self.delay[0], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
                          parse_mode='HTML')
 
     def report_members(self, bot, update, args):
@@ -337,7 +340,6 @@ class SSP:
             remaining = len(db_connect.execute(
                 "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
             step = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
-
             rem = remaining
 
             while remaining > 0:
@@ -380,8 +382,9 @@ class SSP:
     def task(self, bot, job):
         try:
             t1 = self.current_time()[1]
-            if int(t1[-4:-2]) in self.delay and not int(t1[-4:-2]) == 0 and not self.sleep():
+            if int(t1[-4:-2]) in self.delay and not self.sleep():
                 self.send_to_ch()
+
             elif int(t1[-4:-2]) == 0:
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
@@ -395,17 +398,16 @@ class SSP:
 
                     @crazymind3''')
 
-            if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 10:
-                self.robot.send_message(chat_id=self.channel_name, text='''⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
+            if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
+                self.robot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
 
 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
 
-✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده؛ حتی روندِ رشدِ ممبرهامون هم تغییرِ چشمگیری کرد
+✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده
 
 ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
-با این ایدی برای ربات درتماس باشید 
-@s_for_cna
-💯به 5نفرِ اول که ربات رو اجاره کنند تخفیف داده میشه''')
+با @s_for_cna برای ربات درتماس باشید 
+""")
 
             if int(t1[:-2]) == 0:
                 self.add_member()
