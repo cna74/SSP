@@ -18,7 +18,8 @@ def create_db():
                            "sent INTEGER DEFAULT 0,"
                            "ch_a INTEGER DEFAULT 0,"
                            "in_date DATE,"
-                           "out_date DATE);")
+                           "out_date DATE,"
+                           "other TEXT);")
         db_connect.execute("CREATE TABLE IF NOT EXISTS Activity("
                            "ID INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0,"
                            "admin_name TEXT,"
@@ -35,10 +36,12 @@ def create_db():
 
 
 # 5005
-def insert(kind, from_ad, file_id, caption, gp, in_date):
+def insert(kind, from_ad, file_id, caption, gp, in_date, other=None):
     try:
-        cursor.execute("INSERT INTO Queue(kind, from_ad, file_id, caption, gp, ch_a, in_date) VALUES(?,?,?,?,?,?,?)",
-                       (kind, from_ad, file_id, caption, gp, 0, in_date))
+        cursor.execute("INSERT INTO "
+                       "Queue(kind, from_ad, file_id, caption, gp, ch_a, in_date, other) "
+                       "VALUES(?,?,?,?,?,?,?,?)",
+                       (kind, from_ad, file_id, caption, gp, 0, in_date, other))
         db_connect.commit()
     except Exception as E:
         print(5005, E)

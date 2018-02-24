@@ -18,7 +18,7 @@ matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
 sina, lili, fery = 103086461, 303962908, 319801025
-logging.basicConfig(filename='sample.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
+logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
 class SSP:
@@ -31,6 +31,27 @@ class SSP:
         self.bed_time = 30000
         self.wake_time = 90000
 
+    @staticmethod
+    def current_time():
+        utc = pytz.utc
+        u = time.gmtime()
+        utc_dt = datetime(u[0], u[1], u[2], u[3], u[4], u[5], tzinfo=utc)
+        eastern = pytz.timezone('Asia/Tehran')
+        loc_dt = utc_dt.astimezone(eastern)
+        return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
+
+    @staticmethod
+    def _before(year=None, months=None):
+        out = None
+        if year and months:
+            before = JalaliDate().strptime(year + months, '%Y%m') - timedelta(days=1)
+            out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
+            out.extend([i for i in db_connect.execute(
+                "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
+        return out
+
+    # region CommandHandlers
+    # setters
     def set_delay(self, bot, update, args):
         try:
             if args:
@@ -69,227 +90,6 @@ class SSP:
                     self.wake_time = int(entry) * 10000
         except Exception as E:
             bot.send_message(chat_id=update.message.chat_id, text='ERROR')
-
-    @staticmethod
-    def current_time():
-        utc = pytz.utc
-        u = time.gmtime()
-        utc_dt = datetime(u[0], u[1], u[2], u[3], u[4], u[5], tzinfo=utc)
-        eastern = pytz.timezone('Asia/Tehran')
-        loc_dt = utc_dt.astimezone(eastern)
-        return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
-
-    def id_remove(self, entry):
-        pattern = re.compile(r'(@\S+)', re.I)
-        pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
-        pattern2 = re.compile(r'https://t\.me\S*')
-        if re.search(pattern2, entry):
-            link = re.findall(pattern2, entry)
-            for i in link:
-                entry = entry.replace(i, '')
-        if re.search(pattern1, entry):
-            logo = re.findall(pattern1, entry)[0]
-            entry = re.sub(pattern1, '', entry)
-            entry = logo + entry
-        if re.search(pattern, entry):
-            state = re.findall(pattern, entry)
-            for state in state:
-                if state.lower() not in ('@crazymind3', '@mmd_bt'):
-                    entry = re.sub(state, '@CrazyMind3', entry)
-            if entry.lower().strip()[len(self.channel_name) * (-2):].find('@crazymind3') == -1:
-                entry = entry + '\n@CrazyMind3'
-            return entry
-        else:
-            return entry + '\n@CrazyMind3'
-
-    def image_watermark(self, photo, caption):
-        try:
-            self.robot.getFile(photo).download('image/tmp.jpg')
-            pattern = re.compile(r':(\S{1,2}):', re.I)
-            coor_pt = re.compile(r'(nw|ne|nc|cw|cc|ce|sw|sc|se|no|e|n|w|s)', re.I)
-            if re.search(pattern, caption):
-                i_cor = ''.join(re.findall(pattern, caption)[0]).lower()
-                coor = re.findall(coor_pt, i_cor)[0] if re.findall(coor_pt, i_cor)[0] else 'sw'
-            else:
-                coor = 'sw'
-            bg = Image.open('image/tmp.jpg')
-            if not coor == 'no':
-                lg = Image.open('logo/CC.png')
-                res, lg_sz = bg.size, lg.size
-                box_def = (3500, 3500)
-                n_def = [int((lg_sz[0] * res[0]) / box_def[0]), int((lg_sz[1] * res[1]) / box_def[1])]
-
-                lg.thumbnail(n_def, Image.ANTIALIAS)
-                lg_sz = lg.size
-                dict1 = {'nw': (0, 0),
-                         'n': (int((res[0] / 2) - (lg_sz[0] / 2)), 0),
-                         'nc': (int(res[0] / 2 - lg_sz[0] / 2), 0),
-                         'ne': (res[0] - lg_sz[0], 0),
-                         'w': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
-                         'cw': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
-                         'cc': (int(res[0] / 2 - lg_sz[0] / 2), int(res[1] / 2)),
-                         'e': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
-                         'ce': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
-                         'sw': (0, res[1] - lg_sz[1]),
-                         's': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
-                         'sc': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
-                         'se': (res[0] - lg_sz[0], res[1] - lg_sz[1])
-                         }
-
-                if dict1.get(coor):
-                    bg.paste(lg, dict1.get(coor, 'sw'), lg)
-                    bg.save('image/out.jpg')
-            else:
-                bg.save('image/out.jpg')
-
-            if re.search(r':\S{,2}:', caption):
-                caption = self.id_remove(re.sub(':\S{,2}:', '', caption))
-            else:
-                caption = self.id_remove(caption)
-            return caption
-        except Exception as E:
-            logging.error("put {}".format(E))
-
-    def gif_watermark(self, gif, form, caption):
-        try:
-            caption = str(caption)
-            self.robot.getFile(gif).download('gif/tmp.'+form)
-            file = 'gif/tmp.'+form
-            pattern = re.compile(r':\d:')
-            pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
-                   4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
-                   7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
-            find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
-            clip = VideoFileClip(file, audio=False)
-            w, h = clip.size
-
-            logo = ImageClip("logo/CC.png")\
-                .set_duration(clip.duration)\
-                .resize(width=w//5, height=h//5)\
-                .set_pos(pos.get(find, 7))
-            final = CompositeVideoClip([clip, logo])
-            final.write_videofile(filename='gif/out.'+form)
-            if re.search(pattern, caption):
-                caption = self.id_remove(re.sub(pattern, '', caption))
-            else:
-                caption = self.id_remove(caption)
-            return caption
-        except Exception as E:
-            logging.error('gif_watermark {}'.format(E))
-
-    def save(self, bot, update):
-        try:
-            um = update.message
-            ue = update.edited_message
-            kind = name = text = file_id = 'none'
-            if ue:
-                gp_id = ue.message_id
-                out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
-                if ue.text and out[9] == 1:
-                    text = self.id_remove(ue.text)
-                    self.robot.edit_message_text(chat_id=self.channel_name, message_id=out[6], text=text)
-                elif ue.caption and out[9] == 1:
-                    text = self.id_remove(ue.caption)
-                    self.robot.edit_message_caption(chat_id=self.channel_name, message_id=out[6], caption=text)
-                elif ue.text:
-                    text = ue.text
-                    db_edit(caption=text, gp=gp_id, edited=1, sent=0)
-                elif ue.caption:
-                    text = ue.caption
-                    db_edit(caption=text, gp=gp_id, edited=1, sent=0)
-            elif um:
-                in_date = ' '.join(self.current_time())
-                from_ad = um.from_user.id if um.from_user.id else 'none'
-                gp_id = um.message_id
-                if um.text:
-                    text = um.text
-                    kind = 'text'
-                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
-                else:
-                    text = um.caption if um.caption else ''
-                    if um.photo:
-                        kind = 'photo'
-                        file_id = um.photo[-1].file_id
-                    elif um.video:
-                        kind = 'video'
-                        file_id = um.video.file_id
-                    elif um.document:
-                        kind = 'document'
-                        if um.document.mime_type in ('video/mp4', 'image/gif'):
-                            kind = 'gif ' + str(um.document.mime_type).split('/')[1]
-                        file_id = um.document.file_id
-                    elif um.voice:
-                        kind = 'voice'
-                        file_id = um.voice.file_id
-                    elif um.audio:
-                        kind = 'audio'
-                        file_id = um.audio.file_id
-                    elif um.video_note:
-                        kind = 'v_note'
-                        file_id = um.video_note.file_id
-                    if kind in ('photo', 'video', 'document', 'gif', 'voice', 'audio', 'v_note'):
-                        insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
-
-        except Exception as E:
-            logging.error('save {}'.format(E))
-
-    def send_to_ch(self):
-        try:
-            out = [i for i in cursor.execute("""
-            SELECT * FROM Queue WHERE sent=0 AND 
-            caption NOT LIKE '.%' AND 
-            caption NOT LIKE '/%' 
-            ORDER BY ID LIMIT 1""")][0]
-            cp = self.id_remove(out[4])
-            if out[7] == 1 and out[8] == 0 and out[9] == 1:
-                if out[2] == 'text':
-                    self.robot.edit_message_text(chat_id=self.channel_name, text=cp, message_id=out[5])
-                    cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
-                    db_connect.commit()
-                else:
-                    self.robot.edit_message_caption(chat_id=self.channel_name, caption=cp, message_id=out[5])
-                    cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
-                    db_connect.commit()
-                logging.info('edit_msg msg_ID_in_db {}'.format(out[0]))
-            elif out[8] == 0 or out[9] == 0:
-                ch = None
-                if out[2] == 'text':
-                    ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
-                elif out[2] == 'video':
-                    ch = self.robot.send_video(chat_id=self.channel_name, video=out[3], caption=cp).message_id
-                elif out[2] == 'photo':
-                    cp = self.image_watermark(out[3], out[4])
-                    ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('image/out.jpg', 'rb'),
-                                               caption=cp).message_id
-                elif out[2] == 'audio':
-                    ch = self.robot.send_audio(chat_id=self.channel_name, audio=out[3], caption=cp).message_id
-                elif out[2] == 'document':
-                    ch = self.robot.send_document(chat_id=self.channel_name, document=out[3], caption=cp).message_id
-                elif out[2] == 'v_note':
-                    ch = self.robot.send_video_note(chat_id=self.channel_name, video_note=out[3]).message_id
-                elif out[2] == 'voice':
-                    ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
-                elif str(out[2]).split('/')[0] == 'gif':
-                    gif, form = str(out[2]).split('/')
-                    cp = self.gif_watermark(gif=out[3], format=form, caption=out[4])
-                    ch = self.robot.send_document(chat_id=self.channel_name, document=open('gif/out.'+form, 'rb'),
-                                                  caption=cp).message_id
-                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
-                logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
-        except IndexError:
-            pass
-        except Exception as E:
-            logging.error('send_to_ch msg_num {}'.format(E))
-
-    @staticmethod
-    def _before(year=None, months=None):
-        out = None
-        if year and months:
-            before = JalaliDate().strptime(year + months, '%Y%m') - timedelta(days=1)
-            out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
-            out.extend([i for i in db_connect.execute(
-                "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
-        return out
 
     def state(self, bot, update):
         try:
@@ -397,11 +197,7 @@ class SSP:
         except Exception as E:
             logging.error("Could't get remaining time by {}".format(update.message.from_user))
 
-    def sleep(self, entry=None):
-        entry = int(self.current_time()[1]) if not entry else int(entry)
-        if entry >= self.bed_time > self.wake_time < entry or entry >= self.bed_time < self.wake_time > entry:
-            return True
-        return False
+    # endregion
 
     def add_member(self):
         try:
@@ -419,13 +215,230 @@ class SSP:
         except Exception as E:
             logging.error('add members {}'.format(E))
 
+    def id_remove(self, entry):
+        pattern = re.compile(r'(@\S+)', re.I)
+        pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
+        pattern2 = re.compile(r'https://t\.me\S*')
+        if re.search(pattern2, entry):
+            link = re.findall(pattern2, entry)
+            for i in link:
+                entry = entry.replace(i, '')
+        if re.search(pattern1, entry):
+            logo = re.findall(pattern1, entry)[0]
+            entry = re.sub(pattern1, '', entry)
+            entry = logo + entry
+        if re.search(pattern, entry):
+            state = re.findall(pattern, entry)
+            for state in state:
+                if state.lower() not in ('@crazymind3', '@mmd_bt'):
+                    entry = re.sub(state, '@CrazyMind3', entry)
+            if entry.lower().strip()[len(self.channel_name) * (-2):].find('@crazymind3') == -1:
+                entry = entry + '\n@CrazyMind3'
+            return entry
+        else:
+            return entry + '\n@CrazyMind3'
+
+    def image_watermark(self, photo, caption):
+        try:
+            self.robot.getFile(photo).download('image/tmp.jpg')
+            pattern = re.compile(r':(\S{1,2}):', re.I)
+            coor_pt = re.compile(r'(nw|ne|nc|cw|cc|ce|sw|sc|se|no|e|n|w|s)', re.I)
+            if re.search(pattern, caption):
+                i_cor = ''.join(re.findall(pattern, caption)[0]).lower()
+                coor = re.findall(coor_pt, i_cor)[0] if re.findall(coor_pt, i_cor)[0] else 'sw'
+            else:
+                coor = 'sw'
+            bg = Image.open('image/tmp.jpg')
+            if not coor == 'no':
+                lg = Image.open('logo/CC.png')
+                res, lg_sz = bg.size, lg.size
+                box_def = (3500, 3500)
+                n_def = [int((lg_sz[0] * res[0]) / box_def[0]), int((lg_sz[1] * res[1]) / box_def[1])]
+
+                lg.thumbnail(n_def, Image.ANTIALIAS)
+                lg_sz = lg.size
+                dict1 = {'nw': (0, 0),
+                         'n': (int((res[0] / 2) - (lg_sz[0] / 2)), 0),
+                         'nc': (int(res[0] / 2 - lg_sz[0] / 2), 0),
+                         'ne': (res[0] - lg_sz[0], 0),
+                         'w': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
+                         'cw': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
+                         'cc': (int(res[0] / 2 - lg_sz[0] / 2), int(res[1] / 2)),
+                         'e': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
+                         'ce': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
+                         'sw': (0, res[1] - lg_sz[1]),
+                         's': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
+                         'sc': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
+                         'se': (res[0] - lg_sz[0], res[1] - lg_sz[1])
+                         }
+
+                if dict1.get(coor):
+                    bg.paste(lg, dict1.get(coor, 'sw'), lg)
+                    bg.save('image/out.jpg')
+            else:
+                bg.save('image/out.jpg')
+
+            if re.search(r':\S{,2}:', caption):
+                caption = self.id_remove(re.sub(':\S{,2}:', '', caption))
+            else:
+                caption = self.id_remove(caption)
+            return caption
+        except Exception as E:
+            logging.error("put {}".format(E))
+
+    def gif_watermark(self, gif, form, caption):
+        try:
+            caption = str(caption)
+            self.robot.getFile(gif).download('vid/tmp.'+form)
+            file = 'vid/tmp.'+form
+            pattern = re.compile(r':\d:')
+            pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
+                   4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
+                   7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
+            find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
+            clip = VideoFileClip(file, audio=False)
+            w, h = clip.size
+
+            logo = ImageClip("logo/CC.png")\
+                .set_duration(clip.duration)\
+                .resize(width=w//5, height=h//5)\
+                .set_pos(pos.get(find, 7))
+            final = CompositeVideoClip([clip, logo])
+            final.write_videofile(filename='vid/out.mp4')
+            if re.search(pattern, caption):
+                caption = self.id_remove(re.sub(pattern, '', caption))
+            else:
+                caption = self.id_remove(caption)
+            return caption
+        except Exception as E:
+            logging.error('vid_watermark {}'.format(E))
+
+    def save(self, bot, update):
+        try:
+            um = update.message
+            ue = update.edited_message
+            kind = name = text = file_id = 'none'
+            if ue:
+                gp_id = ue.message_id
+                out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
+                if ue.text and out[9] == 1:
+                    text = self.id_remove(ue.text)
+                    self.robot.edit_message_text(chat_id=self.channel_name, message_id=out[6], text=text)
+                elif ue.caption and out[9] == 1:
+                    text = self.id_remove(ue.caption)
+                    self.robot.edit_message_caption(chat_id=self.channel_name, message_id=out[6], caption=text)
+                elif ue.text:
+                    text = ue.text
+                    db_edit(caption=text, gp=gp_id, edited=1, sent=0)
+                elif ue.caption:
+                    text = ue.caption
+                    db_edit(caption=text, gp=gp_id, edited=1, sent=0)
+            elif um:
+                in_date = ' '.join(self.current_time())
+                from_ad = um.from_user.id if um.from_user.id else 'none'
+                gp_id = um.message_id
+                if um.text:
+                    text = um.text
+                    kind = 'text'
+                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
+                else:
+                    text = um.caption if um.caption else ''
+                    other = None
+                    if um.photo:
+                        kind = 'photo'
+                        file_id = um.photo[-1].file_id
+                    elif um.video:
+                        kind = 'video'
+                        file_id = um.video.file_id
+                    elif um.document:
+                        kind = 'document'
+                        if um.document.mime_type in ('video/mp4', 'image/vid'):
+                            kind = 'vid'
+                            other = str(um.document.mime_type).split('/')[1]
+                        file_id = um.document.file_id
+                    elif um.voice:
+                        kind = 'voice'
+                        file_id = um.voice.file_id
+                    elif um.audio:
+                        kind = 'audio'
+                        file_id = um.audio.file_id
+                    elif um.video_note:
+                        kind = 'v_note'
+                        file_id = um.video_note.file_id
+                    if kind in ('photo', 'video', 'document', 'vid', 'voice', 'audio', 'v_note'):
+                        insert(kind=kind, from_ad=from_ad, file_id=file_id,
+                               caption=text, gp=gp_id, in_date=in_date, other=other)
+
+        except Exception as E:
+            logging.error('save {}'.format(E))
+
+    def send_to_ch(self):
+        try:
+            out = [i for i in cursor.execute("""
+            SELECT * FROM Queue WHERE sent=0 AND 
+            caption NOT LIKE '.%' AND 
+            caption NOT LIKE '/%' 
+            ORDER BY ID LIMIT 1""")][0]
+            cp = self.id_remove(out[4])
+            if out[7] == 1 and out[8] == 0 and out[9] == 1:
+                if out[2] == 'text':
+                    self.robot.edit_message_text(chat_id=self.channel_name, text=cp, message_id=out[5])
+                    cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
+                    db_connect.commit()
+                else:
+                    self.robot.edit_message_caption(chat_id=self.channel_name, caption=cp, message_id=out[5])
+                    cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
+                    db_connect.commit()
+                logging.info('edit_msg msg_ID_in_db {}'.format(out[0]))
+            elif out[8] == 0 or out[9] == 0:
+                ch = None
+                if out[2] == 'text':
+                    ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
+                elif out[2] == 'video':
+                    # TODO set logo on videos
+                    # form = out[12]
+                    # cp = self.gif_watermark(vid=out[3], form=form, caption=out[4])
+                    ch = self.robot.send_video(chat_id=self.channel_name, video=out[3], caption=cp).message_id
+                elif out[2] == 'photo':
+                    cp = self.image_watermark(out[3], out[4])
+                    ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('image/out.jpg', 'rb'),
+                                               caption=cp).message_id
+                    os.remove('image/out.jpg')
+                elif out[2] == 'audio':
+                    ch = self.robot.send_audio(chat_id=self.channel_name, audio=out[3], caption=cp).message_id
+                elif out[2] == 'document':
+                    ch = self.robot.send_document(chat_id=self.channel_name, document=out[3], caption=cp).message_id
+                elif out[2] == 'v_note':
+                    ch = self.robot.send_video_note(chat_id=self.channel_name, video_note=out[3]).message_id
+                elif out[2] == 'voice':
+                    ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
+                elif out[2] == 'vid':
+                    form = out[12]
+                    cp = self.gif_watermark(gif=out[3], form=form, caption=out[4])
+                    ch = self.robot.send_document(chat_id=self.channel_name, document=open('vid/out.mp4', 'rb'),
+                                                  caption=cp).message_id
+                    os.remove('vid/out.mp4')
+                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
+                logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
+        except IndexError:
+            pass
+        except Exception as E:
+            logging.error('send_to_ch msg_num {}'.format(E))
+
+    def sleep(self, entry=None):
+        entry = int(self.current_time()[1]) if not entry else int(entry)
+        if entry >= self.bed_time > self.wake_time < entry or entry >= self.bed_time < self.wake_time > entry:
+            return True
+        return False
+
     def task(self, bot, job):
         try:
             t1 = self.current_time()[1]
-            if int(t1[-4:-2]) in self.delay and not self.sleep():
-                self.send_to_ch()
 
-            elif int(t1[-4:-2]) == 0:
+            if int(t1[:-2]) == 0:
+                self.add_member()
+
+            if int(t1[-4:-2]) == 0:
                 self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
             if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
@@ -438,6 +451,9 @@ class SSP:
 
                     @crazymind3''')
 
+            if int(t1[-4:-2]) in self.delay and not self.sleep():
+                self.send_to_ch()
+
             #             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
             #                 self.robot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
             #
@@ -449,8 +465,6 @@ class SSP:
             # با @s_for_cna برای ربات درتماس باشید
             # """)
 
-            if int(t1[:-2]) == 0:
-                self.add_member()
         except Exception as E:
             logging.error('Task {}'.format(E))
 
