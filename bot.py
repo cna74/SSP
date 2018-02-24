@@ -153,10 +153,10 @@ class SSP:
                     if predict and not (average * (30 - len(members))) <= 0:
                         pdt = int(members[-1] + (average * (30 - len(members))))
                         caption += '\npredict of month = {}'.format(pdt)
-                    plt.plot(range(1, len(members) + 1), members, 'r:', label='now', markersize=4)
-                    plt.plot(range(1, len(members)), members[:-1], 'b:', label='members', markersize=4)
+                    plt.plot(range(1, len(members) + 1), members, 'r-', label='now', markersize=4, marker='o')
+                    plt.plot(range(1, len(members)), members[:-1], 'b-', label='members', markersize=4, marker='o')
                 else:
-                    plt.plot(range(1, len(members) + 1), members, 'b:', label='members', markersize=4)
+                    plt.plot(range(1, len(members) + 1), members, 'b-', label='members', markersize=4, marker='o')
                 plt.grid()
                 plt.xlim(1, )
                 plt.xlabel('days')
@@ -164,14 +164,14 @@ class SSP:
                 plt.title(title)
                 plt.legend(loc=4)
                 plt.savefig('plot/plot.png')
-                bot.send_photo(chat_id=update.message.chat_id, photo=open('plot.png', 'rb'), caption=caption)
+                bot.send_photo(chat_id=update.message.chat_id, photo=open('plot/plot.png', 'rb'), caption=caption)
                 plt.close()
             logging.info('plot:: args {} -- by: {}'.format(args, update.message.from_user))
         except Exception as E:
             self.robot.send_message(chat_id=update.message.chat_id,
                                     text='**ERROR {}**'.format(update.message.text),
                                     parse_mode='Markdown')
-            logging.error("Could't get plot:: args {} -- by: {}".format(args, update.message.from_user))
+            logging.error("Could't get plot:: args {} -- by: {} - {}".format(args, update.message.from_user, E))
 
     def remain(self, bot, update):
         try:
