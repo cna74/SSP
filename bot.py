@@ -1,4 +1,5 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from khayyam import JalaliDate, JalaliDatetime
 from datetime import datetime, timedelta
 from pprint import pprint
@@ -6,6 +7,7 @@ from database import *
 from PIL import Image
 import matplotlib
 import telegram
+import logging
 import psutil
 import pytz
 import time
@@ -15,6 +17,7 @@ matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
 sina, lili, fery = 103086461, 303962908, 319801025
+logging.basicConfig(filename='sample.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
 class SSP:
@@ -98,10 +101,9 @@ class SSP:
         else:
             return entry + '\n@CrazyMind3'
 
-    # 4004
-    def put(self, photo, caption):
+    def image_watermark(self, photo, caption):
         try:
-            self.robot.getFile(photo).download('tmp.jpg')
+            self.robot.getFile(photo).download('image/tmp.jpg')
             pattern = re.compile(r':(\S{1,2}):', re.I)
             coor_pt = re.compile(r'(nw|ne|nc|cw|cc|ce|sw|sc|se|no|e|n|w|s)', re.I)
             if re.search(pattern, caption):
@@ -109,9 +111,9 @@ class SSP:
                 coor = re.findall(coor_pt, i_cor)[0] if re.findall(coor_pt, i_cor)[0] else 'sw'
             else:
                 coor = 'sw'
-            bg = Image.open('tmp.jpg')
+            bg = Image.open('image/tmp.jpg')
             if not coor == 'no':
-                lg = Image.open('CC.png')
+                lg = Image.open('logo/CC.png')
                 res, lg_sz = bg.size, lg.size
                 box_def = (3500, 3500)
                 n_def = [int((lg_sz[0] * res[0]) / box_def[0]), int((lg_sz[1] * res[1]) / box_def[1])]
@@ -135,20 +137,44 @@ class SSP:
 
                 if dict1.get(coor):
                     bg.paste(lg, dict1.get(coor, 'sw'), lg)
-                    bg.save('out.jpg')
+                    bg.save('image/out.jpg')
             else:
-                bg.save('out.jpg')
+                bg.save('image/out.jpg')
+
             if re.search(r':\S{,2}:', caption):
                 caption = self.id_remove(re.sub(':\S{,2}:', '', caption))
             else:
                 caption = self.id_remove(caption)
-
             return caption
         except Exception as E:
+            logging.error("put {}".format(E))
 
-            print(4004, E)
+    def gif_watermark(self, gif, caption):
+        try:
+            caption = str(caption)
+            self.robot.getFile(gif).download('gif/tmp.mp4')
+            pattern = re.compile(r':\d:')
+            pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
+                   4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
+                   7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
+            find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
+            clip = VideoFileClip("gif/tmp.mp4", audio=False)
+            w, h = clip.size
 
-    # 3003
+            logo = ImageClip("logo/CC.png")\
+                .set_duration(clip.duration)\
+                .resize(width=w//5, height=h//5)\
+                .set_pos(pos.get(find, 7))
+            final = CompositeVideoClip([clip, logo])
+            final.write_videofile(filename='gif/out.mp4')
+            if re.search(pattern, caption):
+                caption = self.id_remove(re.sub(pattern, '', caption))
+            else:
+                caption = self.id_remove(caption)
+            return caption
+        except Exception as E:
+            logging.error('gif_watermark {}'.format(E))
+
     def save(self, bot, update):
         try:
             um = update.message
@@ -187,6 +213,8 @@ class SSP:
                         file_id = um.video.file_id
                     elif um.document:
                         kind = 'document'
+                        if um.document.mime_type == 'video/mp4':
+                            kind = 'gif'
                         file_id = um.document.file_id
                     elif um.voice:
                         kind = 'voice'
@@ -197,13 +225,12 @@ class SSP:
                     elif um.video_note:
                         kind = 'v_note'
                         file_id = um.video_note.file_id
-                    if kind in ('photo', 'video', 'document', 'voice', 'audio', 'v_note'):
+                    if kind in ('photo', 'video', 'document', 'gif', 'voice', 'audio', 'v_note'):
                         insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
 
         except Exception as E:
-            print(3003, E)
+            logging.error('save {}'.format(E))
 
-    # 1001
     def send_to_ch(self):
         try:
             out = [i for i in cursor.execute("""
@@ -221,6 +248,7 @@ class SSP:
                     self.robot.edit_message_caption(chat_id=self.channel_name, caption=cp, message_id=out[5])
                     cursor.execute("UPDATE Queue SET sent=1 WHERE ID = {0}".format(out[0]))
                     db_connect.commit()
+                logging.info('edit_msg msg_ID_in_db {}'.format(out[0]))
             elif out[8] == 0 or out[9] == 0:
                 ch = None
                 if out[2] == 'text':
@@ -228,9 +256,9 @@ class SSP:
                 elif out[2] == 'video':
                     ch = self.robot.send_video(chat_id=self.channel_name, video=out[3], caption=cp).message_id
                 elif out[2] == 'photo':
-                    cap = self.put(out[3], out[4])
-                    ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('out.jpg', 'rb'),
-                                               caption=cap).message_id
+                    cp = self.image_watermark(out[3], out[4])
+                    ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('image/out.jpg', 'rb'),
+                                               caption=cp).message_id
                 elif out[2] == 'audio':
                     ch = self.robot.send_audio(chat_id=self.channel_name, audio=out[3], caption=cp).message_id
                 elif out[2] == 'document':
@@ -239,11 +267,16 @@ class SSP:
                     ch = self.robot.send_video_note(chat_id=self.channel_name, video_note=out[3]).message_id
                 elif out[2] == 'voice':
                     ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
+                elif out[2] == 'gif':
+                    cp = self.gif_watermark(out[3], out[4])
+                    ch = self.robot.send_document(chat_id=self.channel_name, document=open('gif/out.mp4', 'rb'),
+                                                  caption=cp).message_id
                 db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
+                logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
         except IndexError:
             pass
         except Exception as E:
-            print(1001, E)
+            logging.error('send_to_ch msg_num {}'.format(E))
 
     @staticmethod
     def _before(year=None, months=None):
@@ -256,10 +289,14 @@ class SSP:
         return out
 
     def state(self, bot, update):
-        bot.send_message(chat_id=update.message.chat_id,
-                         text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
-                             self.delay[1] - self.delay[0], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
-                         parse_mode='HTML')
+        try:
+            bot.send_message(chat_id=update.message.chat_id,
+                             text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
+                                 self.delay[1] - self.delay[0], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
+                             parse_mode='HTML')
+            logging.info("/state by {}".format(update.message.from_user))
+        except Exception as E:
+            logging.error("/state {} by {}".format(E, update.message.from_user))
 
     def report_members(self, bot, update, args):
         try:
@@ -312,28 +349,26 @@ class SSP:
                         title, members[-1] - members[0], average, members[0], members[-1])
                     if predict and not (average * (30 - len(members))) <= 0:
                         pdt = int(members[-1] + (average * (30 - len(members))))
-                        caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}\npredict of month = {}' \
-                                  ''.format(title, members[-1] - members[0], average, members[0], members[-1], pdt)
-
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
-                             markersize=4)
+                        caption += '\npredict of month = {}'.format(pdt)
+                    plt.plot(range(1, len(members) + 1), members, 'r:', label='now', markersize=4)
+                    plt.plot(range(1, len(members)), members[:-1], 'b:', label='members', markersize=4)
                 else:
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
-                             markersize=4)
+                    plt.plot(range(1, len(members) + 1), members, 'b:', label='members', markersize=4)
                 plt.grid()
                 plt.xlim(1, )
                 plt.xlabel('days')
                 plt.ylabel('members')
                 plt.title(title)
                 plt.legend(loc=4)
-                plt.savefig('plot.png')
+                plt.savefig('plot/plot.png')
                 bot.send_photo(chat_id=update.message.chat_id, photo=open('plot.png', 'rb'), caption=caption)
                 plt.close()
+            logging.info('plot:: args {} -- by: {}'.format(args, update.message.from_user))
         except Exception as E:
-            self.robot.send_message(chat_id=update.message.chat_id, text='**ERROR {}**'.format(update.message.text),
+            self.robot.send_message(chat_id=update.message.chat_id,
+                                    text='**ERROR {}**'.format(update.message.text),
                                     parse_mode='Markdown')
-            print(E)
+            logging.error("Could't get plot:: args {} -- by: {}".format(args, update.message.from_user))
 
     def remain(self, bot, update):
         try:
@@ -355,18 +390,19 @@ class SSP:
             else:
                 text = '0 remaining'
             bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
+            logging.info("remain by {}".format(update.message.from_user))
         except Exception as E:
-            print(9009, E)
+            logging.error("Could't get remaining time by {}".format(update.message.from_user))
 
     def sleep(self, entry=None):
-        entry = self.current_time()[1] if not entry else entry
-        if int(entry) >= self.bed_time > self.wake_time < int(entry) or \
-                                        int(entry) >= self.bed_time < self.wake_time > int(entry):
+        entry = int(self.current_time()[1]) if not entry else int(entry)
+        if entry >= self.bed_time > self.wake_time < entry or entry >= self.bed_time < self.wake_time > entry:
             return True
         return False
 
     def add_member(self):
         try:
+            cu = self.current_time()
             mem = [self.robot.get_chat_members_count(self.channel_name)]
             try:
                 last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
@@ -374,10 +410,11 @@ class SSP:
                 last = mem[0]
             last = last if last else mem
             cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
-                           (self.current_time()[0], mem[0] - last[0], mem[0]))
+                           (cu[0], mem[0] - last[0], mem[0]))
             db_connect.commit()
+            logging.info('members{}'.format(mem[0]))
         except Exception as E:
-            print("Mem_count didn't updated")
+            logging.error('add members {}'.format(E))
 
     def task(self, bot, job):
         try:
@@ -398,28 +435,28 @@ class SSP:
 
                     @crazymind3''')
 
-#             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
-#                 self.robot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
-#
-# 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
-#
-# ✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده
-#
-# ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
-# با @s_for_cna برای ربات درتماس باشید
-# """)
+            #             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
+            #                 self.robot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
+            #
+            # 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
+            #
+            # ✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده
+            #
+            # ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
+            # با @s_for_cna برای ربات درتماس باشید
+            # """)
 
             if int(t1[:-2]) == 0:
                 self.add_member()
         except Exception as E:
-            print(E)
+            logging.error('Task {}'.format(E))
 
     def start(self):
         dpa = self.updater.dispatcher.add_handler
-        j = self.updater.job_queue
+        job = self.updater.job_queue
         self.updater.start_polling()
-
         print('started')
+
         dpa(CommandHandler('remain', self.remain, Filters.user([sina, lili, fery])))
         dpa(CommandHandler('report', self.report_members, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('state', self.state, Filters.user([sina, lili, fery])))
@@ -427,7 +464,7 @@ class SSP:
         dpa(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
-        j.run_repeating(callback=self.task, interval=60, first=0)
+        job.run_repeating(callback=self.task, interval=60, first=0)
         self.updater.idle()
 
 
