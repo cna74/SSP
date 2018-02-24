@@ -352,7 +352,7 @@ class SSP:
                         file_id = um.video.file_id
                     elif um.document:
                         kind = 'document'
-                        if um.document.mime_type in ('video/mp4', 'image/vid'):
+                        if um.document.mime_type in ('video/mp4', 'image/gif'):
                             kind = 'vid'
                             other = str(um.document.mime_type).split('/')[1]
                         file_id = um.document.file_id
@@ -403,7 +403,7 @@ class SSP:
                     cp = self.image_watermark(out[3], out[4])
                     ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('image/out.jpg', 'rb'),
                                                caption=cp).message_id
-                    os.remove('image/out.jpg')
+                    os.remove('./image/out.jpg')
                 elif out[2] == 'audio':
                     ch = self.robot.send_audio(chat_id=self.channel_name, audio=out[3], caption=cp).message_id
                 elif out[2] == 'document':
@@ -417,7 +417,7 @@ class SSP:
                     cp = self.gif_watermark(gif=out[3], form=form, caption=out[4])
                     ch = self.robot.send_document(chat_id=self.channel_name, document=open('vid/out.mp4', 'rb'),
                                                   caption=cp).message_id
-                    os.remove('vid/out.mp4')
+                    os.remove('./vid/out.mp4')
                 db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
                 logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
         except IndexError:
