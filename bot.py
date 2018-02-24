@@ -13,6 +13,7 @@ import pytz
 import time
 import var
 import re
+import os
 matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 
@@ -149,16 +150,17 @@ class SSP:
         except Exception as E:
             logging.error("put {}".format(E))
 
-    def gif_watermark(self, gif, caption):
+    def gif_watermark(self, gif, form, caption):
         try:
             caption = str(caption)
-            self.robot.getFile(gif).download('gif/tmp.mp4')
+            self.robot.getFile(gif).download('gif/tmp.'+form)
+            file = 'gif/tmp.'+form
             pattern = re.compile(r':\d:')
             pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
                    4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
                    7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
             find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
-            clip = VideoFileClip("gif/tmp.mp4", audio=False)
+            clip = VideoFileClip(file, audio=False)
             w, h = clip.size
 
             logo = ImageClip("logo/CC.png")\
@@ -166,7 +168,7 @@ class SSP:
                 .resize(width=w//5, height=h//5)\
                 .set_pos(pos.get(find, 7))
             final = CompositeVideoClip([clip, logo])
-            final.write_videofile(filename='gif/out.mp4')
+            final.write_videofile(filename='gif/out.'+form)
             if re.search(pattern, caption):
                 caption = self.id_remove(re.sub(pattern, '', caption))
             else:
@@ -213,8 +215,8 @@ class SSP:
                         file_id = um.video.file_id
                     elif um.document:
                         kind = 'document'
-                        if um.document.mime_type == 'video/mp4':
-                            kind = 'gif'
+                        if um.document.mime_type in ('video/mp4', 'image/gif'):
+                            kind = 'gif ' + str(um.document.mime_type).split('/')[1]
                         file_id = um.document.file_id
                     elif um.voice:
                         kind = 'voice'
@@ -267,9 +269,10 @@ class SSP:
                     ch = self.robot.send_video_note(chat_id=self.channel_name, video_note=out[3]).message_id
                 elif out[2] == 'voice':
                     ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
-                elif out[2] == 'gif':
-                    cp = self.gif_watermark(out[3], out[4])
-                    ch = self.robot.send_document(chat_id=self.channel_name, document=open('gif/out.mp4', 'rb'),
+                elif str(out[2]).split('/')[0] == 'gif':
+                    gif, form = str(out[2]).split('/')
+                    cp = self.gif_watermark(gif=out[3], format=form, caption=out[4])
+                    ch = self.robot.send_document(chat_id=self.channel_name, document=open('gif/out.'+form, 'rb'),
                                                   caption=cp).message_id
                 db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
                 logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
