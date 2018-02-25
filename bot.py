@@ -14,7 +14,7 @@ import time
 import var
 import re
 import os
-matplotlib.use('AGG')
+matplotlib.use('AGG', force=True)
 import matplotlib.pyplot as plt
 
 sina, lili, fery = 103086461, 303962908, 319801025
@@ -153,10 +153,12 @@ class SSP:
                     if predict and not (average * (30 - len(members))) <= 0:
                         pdt = int(members[-1] + (average * (30 - len(members))))
                         caption += '\npredict of month = {}'.format(pdt)
-                    plt.plot(range(1, len(members) + 1), members, 'r-', label='now', markersize=4, marker='o')
-                    plt.plot(range(1, len(members)), members[:-1], 'b-', label='members', markersize=4, marker='o')
+                    plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
+                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
+                             markersize=4)
                 else:
-                    plt.plot(range(1, len(members) + 1), members, 'b-', label='members', markersize=4, marker='o')
+                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
+                             markersize=4)
                 plt.grid()
                 plt.xlim(1, )
                 plt.xlabel('days')
