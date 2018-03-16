@@ -213,7 +213,8 @@ class SSP:
             cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
                            (cu[0], mem[0] - last[0], mem[0]))
             db_connect.commit()
-            self.robot.send_document(document=open('bot_db.db', 'rb'), caption=' '.join(self.current_time()))
+            self.robot.send_document(document=open('bot_db.db', 'rb'), caption=' '.join(self.current_time()),
+                                     chat_id=sina)
             logging.info('members{}'.format(mem[0]))
         except Exception as E:
             logging.error('add members {}'.format(E))
@@ -241,39 +242,38 @@ class SSP:
         else:
             return entry + '\n@CrazyMind3'
 
-    def image_watermark(self, photo, caption):
+    def image_watermark(self, photo, caption) -> str:
         try:
+            pattern = re.compile(r':\S{,2}:', re.I)
+            div = 5
+            coor_pt = re.compile(r':\d:', re.I)
+
             self.robot.getFile(photo).download('image/tmp.jpg')
-            pattern = re.compile(r':(\S{1,2}):', re.I)
-            coor_pt = re.compile(r'(nw|ne|nc|cw|cc|ce|sw|sc|se|no|e|n|w|s)', re.I)
             if re.search(pattern, caption):
-                i_cor = ''.join(re.findall(pattern, caption)[0]).lower()
-                coor = re.findall(coor_pt, i_cor)[0] if re.findall(coor_pt, i_cor)[0] else 'sw'
+                i_cor = ''.join(re.findall(pattern, caption)[0])
+                coor = int(re.findall(coor_pt, i_cor)[0]) if re.findall(coor_pt, i_cor)[0] else 0
             else:
-                coor = 'sw'
+                coor = 7
             bg = Image.open('image/tmp.jpg')
-            if not coor == 'no':
+            if not coor == 0:
                 lg = Image.open('logo/CC.png')
                 res, lg_sz = bg.size, lg.size
-                box_def = (3500, 3500)
-                n_def = [int((lg_sz[0] * res[0]) / box_def[0]), int((lg_sz[1] * res[1]) / box_def[1])]
+                if res[0] > res[1]:
+                    n_def = (res[1]//div, res[1]//div)
+                else:
+                    n_def = (res[0]//div, res[0]//div)
 
                 lg.thumbnail(n_def, Image.ANTIALIAS)
                 lg_sz = lg.size
-                dict1 = {'nw': (0, 0),
-                         'n': (int((res[0] / 2) - (lg_sz[0] / 2)), 0),
-                         'nc': (int(res[0] / 2 - lg_sz[0] / 2), 0),
-                         'ne': (res[0] - lg_sz[0], 0),
-                         'w': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
-                         'cw': (0, (int(res[1] / 2 - lg_sz[1] / 2))),
-                         'cc': (int(res[0] / 2 - lg_sz[0] / 2), int(res[1] / 2)),
-                         'e': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
-                         'ce': (res[0] - lg_sz[0], int(res[1] / 2) - int(lg_sz[1] / 2)),
-                         'sw': (0, res[1] - lg_sz[1]),
-                         's': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
-                         'sc': (int(res[0] / 2) - int(lg_sz[0] / 2), res[1] - lg_sz[1]),
-                         'se': (res[0] - lg_sz[0], res[1] - lg_sz[1])
-                         }
+                dict1 = {1: (0, 0),
+                         2: ((res[0] // 2) - (lg_sz[0] // 2), 0),
+                         3: (res[0] - lg_sz[0], 0),
+                         4: (0, (res[1] // 2 - lg_sz[1] // 2)),
+                         5: (res[0] // 2 - lg_sz[0] // 2, res[1] // 2),
+                         6: (res[0] - lg_sz[0], res[1] // 2 - lg_sz[1] // 2),
+                         7: (0, res[1] - lg_sz[1]),
+                         8: (res[0] // 2 - lg_sz[0] // 2, res[1] - lg_sz[1]),
+                         9: (res[0] - lg_sz[0], res[1] - lg_sz[1])}
 
                 if dict1.get(coor):
                     bg.paste(lg, dict1.get(coor, 'sw'), lg)
@@ -281,30 +281,33 @@ class SSP:
             else:
                 bg.save('image/out.jpg')
 
-            if re.search(r':\S{,2}:', caption):
-                caption = self.id_remove(re.sub(':\S{,2}:', '', caption))
+            if re.search(pattern, caption):
+                caption = self.id_remove(re.sub(pattern, '', caption))
             else:
                 caption = self.id_remove(caption)
             return caption
         except Exception as E:
             logging.error("put {}".format(E))
 
-    def gif_watermark(self, gif, form, caption):
+    def gif_watermark(self, gif, form, caption) -> str:
         try:
             caption = str(caption)
-            self.robot.getFile(gif).download('vid/tmp.'+form)
             file = 'vid/tmp.'+form
             pattern = re.compile(r':\d:')
-            pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
-                   4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
-                   7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
             find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
             clip = VideoFileClip(file, audio=False)
             w, h = clip.size
 
+            pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
+                   4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
+                   7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
+            size = h//5 if w > h else w//5
+
+            self.robot.getFile(gif).download('vid/tmp.'+form)
+
             logo = ImageClip("logo/CC.png")\
                 .set_duration(clip.duration)\
-                .resize(width=w//5, height=h//5)\
+                .resize(width=size, height=size)\
                 .set_pos(pos.get(find, 7))
             final = CompositeVideoClip([clip, logo])
             final.write_videofile(filename='vid/out.mp4')
@@ -355,7 +358,7 @@ class SSP:
                         file_id = um.video.file_id
                     elif um.document:
                         kind = 'document'
-                        if um.document.mime_type in ('video/mp4', 'image/gif'):
+                        if um.document.mime_type in ('video/mp4', 'image/gif') and um.document.file_size / 1000000 < 10:
                             kind = 'vid'
                             other = str(um.document.mime_type).split('/')[1]
                         file_id = um.document.file_id
@@ -443,10 +446,10 @@ class SSP:
                 self.add_member()
 
             if int(t1[-4:-2]) == 0:
-                self.robot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
+                bot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
             if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
-                self.robot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+                bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
                     👉🏻 @Mmd_bt 👈🏻
                     شرایط در پی‌وی گفته میشه🍁
                     #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
@@ -459,7 +462,7 @@ class SSP:
                 self.send_to_ch()
 
             #             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
-            #                 self.robot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
+            #                 bot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
             #
             # 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
             #
