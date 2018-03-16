@@ -213,6 +213,7 @@ class SSP:
             cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
                            (cu[0], mem[0] - last[0], mem[0]))
             db_connect.commit()
+            self.robot.send_document(document=open('bot_db.db', 'rb'), caption=' '.join(self.current_time()))
             logging.info('members{}'.format(mem[0]))
         except Exception as E:
             logging.error('add members {}'.format(E))
@@ -375,12 +376,13 @@ class SSP:
             logging.error('save {}'.format(E))
 
     def send_to_ch(self):
+        out = [i for i in cursor.execute("""
+        SELECT * FROM Queue WHERE sent=0 AND 
+        caption NOT LIKE '.%' AND 
+        caption NOT LIKE '/%' 
+        ORDER BY ID LIMIT 1""")][0]
+        ch = None
         try:
-            out = [i for i in cursor.execute("""
-            SELECT * FROM Queue WHERE sent=0 AND 
-            caption NOT LIKE '.%' AND 
-            caption NOT LIKE '/%' 
-            ORDER BY ID LIMIT 1""")][0]
             cp = self.id_remove(out[4])
             if out[7] == 1 and out[8] == 0 and out[9] == 1:
                 if out[2] == 'text':
@@ -393,7 +395,6 @@ class SSP:
                     db_connect.commit()
                 logging.info('edit_msg msg_ID_in_db {}'.format(out[0]))
             elif out[8] == 0 or out[9] == 0:
-                ch = None
                 if out[2] == 'text':
                     ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
                 elif out[2] == 'video':
@@ -420,12 +421,13 @@ class SSP:
                     ch = self.robot.send_document(chat_id=self.channel_name, document=open('vid/out.mp4', 'rb'),
                                                   caption=cp).message_id
                     os.remove('./vid/out.mp4')
-                db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()), )
                 logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
         except IndexError:
             pass
         except Exception as E:
             logging.error('send_to_ch msg_num {}'.format(E))
+        finally:
+            db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()))
 
     def sleep(self, entry=None):
         entry = int(self.current_time()[1]) if not entry else int(entry)
