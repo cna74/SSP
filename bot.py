@@ -150,8 +150,9 @@ class SSP:
                     average = sum(balance) / len(balance)
                     caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
                         title, members[-1] - members[0], average, members[0], members[-1])
-                    if predict and not (average * (30 - len(members))) <= 0:
-                        pdt = int(members[-1] + (average * (30 - len(members))))
+                    days_of_this_month = JalaliDatetime.now().daysinmonth
+                    if predict and not (average * (days_of_this_month - len(members))) <= 0:
+                        pdt = int(members[-1] + (average * (days_of_this_month - len(members))))
                         caption += '\npredict of month = {}'.format(pdt)
                     plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
                     plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
@@ -169,6 +170,8 @@ class SSP:
                 bot.send_photo(chat_id=update.message.chat_id, photo=open('plot/plot.png', 'rb'), caption=caption)
                 plt.close()
             logging.info('plot:: args {} -- by: {}'.format(args, update.message.from_user))
+        except TimeoutError:
+            pass
         except Exception as E:
             self.robot.send_message(chat_id=update.message.chat_id,
                                     text='**ERROR {}**'.format(update.message.text),
