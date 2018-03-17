@@ -178,6 +178,26 @@ class SSP:
                                     parse_mode='Markdown')
             logging.error("Could't get plot:: args {} -- by: {} - {}".format(args, update.message.from_user, E))
 
+    def report_admins(self, bot, update, args):
+        msgs = [i[0] for i in db_connect.execute("SELECT from_ad FROM Queue WHERE ch_a=1").fetchall()]
+        tmp = set(msgs.copy())
+        for i in tmp:
+            print(msgs.count(i), i)
+        admins = []
+        try:
+            for i in tmp:
+                try:
+                    j = self.robot.get_chat(i).to_dict()
+                    if j.get('first_name') and j.get('last_name'):
+                        admins.append(' '.join([j['first_name']] + [j['last_name']]))
+                    elif j.get('first_name'):
+                        admins.append(j['first_name'])
+                except Exception as E:
+                    admins.append(str(i))
+            print(admins)
+        except Exception as E:
+            logging.error('report admins {}'.format(E))
+
     def remain(self, bot, update):
         try:
             remaining = len(db_connect.execute(
@@ -294,10 +314,12 @@ class SSP:
 
     def gif_watermark(self, gif, form, caption) -> str:
         try:
+            print(1)
             caption = str(caption)
             file = 'vid/tmp.'+form
             pattern = re.compile(r':\d:')
             find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
+            self.robot.getFile(gif).download(file)
             clip = VideoFileClip(file, audio=False)
             w, h = clip.size
 
@@ -306,14 +328,12 @@ class SSP:
                    7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
             size = h//5 if w > h else w//5
 
-            self.robot.getFile(gif).download('vid/tmp.'+form)
-
-            logo = ImageClip("logo/CC.png")\
-                .set_duration(clip.duration)\
-                .resize(width=size, height=size)\
+            logo = ImageClip("logo/CC.png") \
+                .set_duration(clip.duration) \
+                .resize(width=size, height=size) \
                 .set_pos(pos.get(find, 7))
             final = CompositeVideoClip([clip, logo])
-            final.write_videofile(filename='vid/out.mp4')
+            final.write_videofile(filename='vid/out.mp4', progress_bar=False, verbose=False)
             if re.search(pattern, caption):
                 caption = self.id_remove(re.sub(pattern, '', caption))
             else:
@@ -464,16 +484,16 @@ class SSP:
             if int(t1[-4:-2]) in self.delay and not self.sleep():
                 self.send_to_ch()
 
-            #             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
-            #                 bot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
-            #
-            # 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
-            #
-            # ✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده
-            #
-            # ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
-            # با @s_for_cna برای ربات درتماس باشید
-            # """)
+                #             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
+                #                 bot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
+                #
+                # 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
+                #
+                # ✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده
+                #
+                # ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
+                # با @s_for_cna برای ربات درتماس باشید
+                # """)
 
         except Exception as E:
             logging.error('Task {}'.format(E))
@@ -485,7 +505,8 @@ class SSP:
         print('started')
 
         dpa(CommandHandler('remain', self.remain, Filters.user([sina, lili, fery])))
-        dpa(CommandHandler('report', self.report_members, Filters.user([sina, lili, fery]), pass_args=True))
+        dpa(CommandHandler('member', self.report_members, Filters.user([sina, lili, fery]), pass_args=True))
+        dpa(CommandHandler('admin', self.report_admins, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('state', self.state, Filters.user([sina, lili, fery])))
         dpa(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
         dpa(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
