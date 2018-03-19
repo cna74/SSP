@@ -222,22 +222,22 @@ class SSP:
                         admins[j['first_name']] = count
                 except Exception as E:
                     pass
-            # legend = {}
-            # for k in list(admins):
-            #     if admins[k] < (sum(admins.values())//100)*5:
-            #         legend[k] = admins[k]
-            #         del admins[k]
-            # legend_label = [r'{} {}'.format(k, v) for k, v in legend.items()]
-            # print(legend_label)
+            legend = {}
+            for k in list(admins):
+                if admins[k] < (sum(admins.values())//100)*5:
+                    legend[k] = admins[k]
+                    del admins[k]
+            legend_label = ['{} {}'.format(k, v) for k, v in legend.items()]
             ex = [[x, y] for x, y in admins.items()]
             data = [x[1] for x in ex]
-            labels = [x[0] for x in ex]
+            labels = ["{}\n{}".format(x[0], x[1]) for x in ex]
             explode = [0.1 for _ in labels]
             # plt.figure(figsize=(8.40, 7.20))
             plt.title(title)
             plt.axes(aspect=1)
             plt.pie(x=data, labels=labels, explode=explode, startangle=90,
                     autopct='%1.1f%%', radius=1.2, labeldistance=1.14, pctdistance=.8)
+            plt.legend(legend_label, bbox_to_anchor=(-.5, 0.5), loc=2, shadow=True, title='leftovers')
             plt.savefig('plot/pie.jpg')
             bot.send_photo(photo=open('plot/pie.jpg', 'rb'), chat_id=update.message.chat_id)
             plt.close()
