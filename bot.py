@@ -41,13 +41,18 @@ class SSP:
         return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
 
     @staticmethod
-    def _before(year=None, months=None):
+    def _before(year=None, months=None, plot='plot') -> list:
         out = None
         if year and months:
             before = JalaliDate().strptime(year + months, '%Y%m') - timedelta(days=1)
-            out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
-            out.extend([i for i in db_connect.execute(
-                "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
+            if plot == 'plot':
+                out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
+                out.extend([i for i in db_connect.execute(
+                    "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
+            elif plot == 'pie':
+                out = [i[0] for i in db_connect.execute(
+                    "SELECT from_ad FROM Queue WHERE ch_a=1 AND out_date LIKE '{}-{}%'".format(
+                        year, months)).fetchall()]
         return out
 
     # region CommandHandlers
@@ -179,22 +184,64 @@ class SSP:
             logging.error("Could't get plot:: args {} -- by: {} - {}".format(args, update.message.from_user, E))
 
     def report_admins(self, bot, update, args):
-        msgs = [i[0] for i in db_connect.execute("SELECT from_ad FROM Queue WHERE ch_a=1").fetchall()]
-        tmp = set(msgs.copy())
-        for i in tmp:
-            print(msgs.count(i), i)
-        admins = []
         try:
+            param = out = title = None
+            if args:
+                pattern = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
+                param = str(args[0]).lower()
+                if re.fullmatch(r'm\d{,2}', param):
+                    months = param[1:]
+                    year = self.current_time()[0][:4]
+                    out = self._before(year, months, plot='pie')
+                    title = 'graph of {}-{}'.format(year, months)
+                elif re.fullmatch(pattern, param):
+                    date = re.fullmatch(pattern, param)
+                    year = date.group('year')
+                    if len(year) == 2:
+                        year = self.current_time()[0][:2] + year
+                    months = date.group('month').zfill(2)
+                    out = self._before(year, months, plot='pie')
+                    title = 'graph of {}-{}'.format(year, months)
+            else:
+                out = [i[0] for i in db_connect.execute("SELECT from_ad FROM Queue WHERE ch_a=1").fetchall()]
+                title = 'graph of all time'
+            tmp = set(out.copy())
+            admins = {}
             for i in tmp:
+                admins[str(i)] = out.count(i)
+            for k in admins.keys():
                 try:
-                    j = self.robot.get_chat(i).to_dict()
+                    j = self.robot.get_chat(k).to_dict()
                     if j.get('first_name') and j.get('last_name'):
-                        admins.append(' '.join([j['first_name']] + [j['last_name']]))
+                        count = admins[k]
+                        del admins[k]
+                        admins[(' '.join([j['first_name']] + [j['last_name']]))] = count
                     elif j.get('first_name'):
-                        admins.append(j['first_name'])
+                        count = admins[k]
+                        del admins[k]
+                        admins[j['first_name']] = count
                 except Exception as E:
-                    admins.append(str(i))
-            print(admins)
+                    pass
+            # legend = {}
+            # for k in list(admins):
+            #     if admins[k] < (sum(admins.values())//100)*5:
+            #         legend[k] = admins[k]
+            #         del admins[k]
+            # legend_label = [r'{} {}'.format(k, v) for k, v in legend.items()]
+            # print(legend_label)
+            ex = [[x, y] for x, y in admins.items()]
+            data = [x[1] for x in ex]
+            labels = [x[0] for x in ex]
+            explode = [0.1 for _ in labels]
+            # plt.figure(figsize=(8.40, 7.20))
+            plt.title(title)
+            plt.axes(aspect=1)
+            plt.pie(x=data, labels=labels, explode=explode, startangle=90,
+                    autopct='%1.1f%%', radius=1.2, labeldistance=1.14, pctdistance=.8)
+            plt.savefig('plot/pie.jpg')
+            bot.send_photo(photo=open('plot/pie.jpg', 'rb'), chat_id=update.message.chat_id)
+            plt.close()
+            os.remove('./plot/pie.jpg')
         except Exception as E:
             logging.error('report admins {}'.format(E))
 
