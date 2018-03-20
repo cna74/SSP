@@ -316,7 +316,7 @@ class SSP:
         try:
             pattern = re.compile(r':\S{,2}:', re.I)
             div = 5
-            coor_pt = re.compile(r':\d:', re.I)
+            coor_pt = re.compile(r'\d', re.I)
 
             self.robot.getFile(photo).download('image/tmp.jpg')
             if re.search(pattern, caption):
