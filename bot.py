@@ -361,7 +361,6 @@ class SSP:
 
     def gif_watermark(self, gif, form, caption) -> str:
         try:
-            print(1)
             caption = str(caption)
             file = 'vid/tmp.'+form
             pattern = re.compile(r':\d:')
