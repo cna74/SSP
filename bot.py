@@ -227,11 +227,11 @@ class SSP:
             data = [x[1] for x in ex]
             labels = ["{}\n{}".format(x[0], x[1]) for x in ex]
             explode = [0.1 for _ in labels]
-            plt.figure(figsize=(8.40, 7.20))
+            plt.figure(figsize=(12.80, 7.20))
             plt.title(title)
             plt.axes(aspect=1)
             plt.pie(x=data, labels=labels, explode=explode, startangle=90,
-                    autopct='%1.1f%%', radius=1.2, labeldistance=1.14, pctdistance=.8)
+                    autopct='%1.1f%%', radius=1.25, labeldistance=1.14, pctdistance=.9)
             plt.savefig('plot/pie.jpg')
             bot.send_photo(photo=open('plot/pie.jpg', 'rb'), chat_id=update.message.chat_id)
             plt.close()
