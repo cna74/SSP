@@ -11,6 +11,7 @@ import logging
 import psutil
 import pytz
 import time
+import sys
 import var
 import re
 import os
@@ -111,6 +112,7 @@ class SSP:
             param = days = out = months = year = title = plus = predict = None
             if args:
                 param = str(args[0]).lower()
+                year_month = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
                 if re.fullmatch(r'd[0-9]*', param):
                     days = param[1:]
                     out = [i for i in
@@ -131,9 +133,10 @@ class SSP:
                     title = 'graph of {}'.format(year)
                     if year == self.current_time()[0][:4]:
                         plus = True
-                elif re.fullmatch(r'[0-9]*-[0-9]*', param):
-                    year = param[:2]
-                    months = param[3:]
+                elif re.fullmatch(year_month, param):
+                    date = re.fullmatch(year_month, param)
+                    year = '13' + date.group('year') if len(date.group('year')) == 2 else date.group('year')
+                    months = date.group('month')
                     out = self._before(year, months)
                     title = 'graph of 20{}-{}'.format(year, months)
                     if year + months == ''.join(self.current_time()[0].split('-'))[:6]:
@@ -181,7 +184,7 @@ class SSP:
             self.robot.send_message(chat_id=update.message.chat_id,
                                     text='**ERROR {}**'.format(update.message.text),
                                     parse_mode='Markdown')
-            logging.error("Could't get plot:: args {} -- by: {} - {}".format(args, update.message.from_user, E))
+            logging.error("Could't get plot:: args {} -- {} - by: {}".format(args, E, update.message.from_user))
 
     def report_admins(self, bot, update, args):
         try:
@@ -196,9 +199,7 @@ class SSP:
                     title = 'graph of {}-{}'.format(year, months)
                 elif re.fullmatch(pattern, param):
                     date = re.fullmatch(pattern, param)
-                    year = date.group('year')
-                    if len(year) == 2:
-                        year = self.current_time()[0][:2] + year
+                    year = '13' + date.group('year') if len(date.group('year')) == 2 else date.group('year')
                     months = date.group('month').zfill(2)
                     out = self._before(year, months, plot='pie')
                     title = 'graph of {}-{}'.format(year, months)
@@ -515,7 +516,7 @@ class SSP:
                 self.add_member()
 
             if int(t1[-4:-2]) == 0:
-                bot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
+                bot.send_message(chat_id=sina, text=psutil.virtual_memory()[2] + str(sys.getsizeof(self)))
 
             if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
                 bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
