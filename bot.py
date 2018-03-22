@@ -113,21 +113,21 @@ class SSP:
             if args:
                 param = str(args[0]).lower()
                 year_month = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
-                if re.fullmatch(r'd[0-9]*', param):
+                if re.fullmatch(r'd\d*', param):
                     days = param[1:]
                     out = [i for i in
                            db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
                     out = [j for j in reversed(out)]
                     title = '{} days'.format(days)
                     plus = True
-                elif re.fullmatch(r'm[0-9]*', param):
-                    months = param[1:]
+                elif re.fullmatch(r'm\d{,2}', param):
+                    months = param[1:].zfill(2)
                     year = self.current_time()[0][:4]
                     out = self._before(year, months)
                     title = 'graph of {}-{}'.format(year, months)
                     if year + months == str(self.current_time()[0].replace('-', '')[:6]):
                         plus = predict = True
-                elif re.fullmatch(r'y[0-9]*', param):
+                elif re.fullmatch(r'y\d{,2}', param):
                     year = '13' + param[1:] if len(param) == 3 else param[1:]
                     out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%'".format(year))]
                     title = 'graph of {}'.format(year)
@@ -509,7 +509,7 @@ class SSP:
                 self.add_member()
 
             if int(t1[-4:-2]) == 0:
-                bot.send_message(chat_id=sina, text=psutil.virtual_memory()[2] + str(sys.getsizeof(self)))
+                bot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
 
             if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
                 bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
