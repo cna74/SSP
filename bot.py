@@ -509,7 +509,7 @@ class SSP:
                 self.add_member()
 
             if int(t1[-4:-2]) == 0:
-                bot.send_message(chat_id=sina, text=psutil.virtual_memory()[2])
+                bot.send_message(chat_id=sina, text=str(psutil.virtual_memory()[2]) + ' - ' + str(sys.getsizeof(self)))
 
             if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
                 bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
