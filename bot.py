@@ -193,7 +193,7 @@ class SSP:
                 pattern = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
                 param = str(args[0]).lower()
                 if re.fullmatch(r'm\d{,2}', param):
-                    months = param[1:]
+                    months = param[1:].zfill(2)
                     year = self.current_time()[0][:4]
                     out = self._before(year, months, plot='pie')
                     title = 'graph of {}-{}'.format(year, months)
@@ -392,10 +392,10 @@ class SSP:
                 out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
                 if ue.text and out[9] == 1:
                     text = self.id_remove(ue.text)
-                    self.robot.edit_message_text(chat_id=self.channel_name, message_id=out[6], text=text)
+                    bot.edit_message_text(chat_id=self.channel_name, message_id=out[6], text=text)
                 elif ue.caption and out[9] == 1:
                     text = self.id_remove(ue.caption)
-                    self.robot.edit_message_caption(chat_id=self.channel_name, message_id=out[6], caption=text)
+                    bot.edit_message_caption(chat_id=self.channel_name, message_id=out[6], caption=text)
                 elif ue.text:
                     text = ue.text
                     db_edit(caption=text, gp=gp_id, edited=1, sent=0)
