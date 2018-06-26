@@ -18,7 +18,9 @@ import os
 matplotlib.use('AGG', force=True)
 import matplotlib.pyplot as plt
 
-sina, lili, fery = 103086461, 303962908, 319801025
+# sina, lili, fery = 103086461, 303962908, 319801025
+admins = var.admins
+sina = var.sina
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
@@ -298,13 +300,13 @@ class SSP:
         if re.search(pattern, entry):
             state = re.findall(pattern, entry)
             for state in state:
-                if state.lower() not in ('@crazymind3', '@mmd_bt'):
-                    entry = re.sub(state, '@CrazyMind3', entry)
-            if entry.lower().strip()[len(self.channel_name) * (-2):].find('@crazymind3') == -1:
-                entry = entry + '\n@CrazyMind3'
+                if state.lower() not in (var.channel_name, '@mmd_bt'):
+                    entry = re.sub(state, var.channel_name, entry)
+            if entry.lower().strip()[len(self.channel_name) * (-2):].find(var.channel_name) == -1:
+                entry = entry + '\n' + var.channel_name
             return entry
         else:
-            return entry + '\n@CrazyMind3'
+            return entry + '\n' + var.channel_name
 
     def image_watermark(self, photo, caption) -> str:
         try:
@@ -511,29 +513,18 @@ class SSP:
             if int(t1[-4:-2]) == 0:
                 bot.send_message(chat_id=sina, text=str(psutil.virtual_memory()[2]) + ' - ' + str(sys.getsizeof(self)))
 
-            if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
-                bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-                    👉🏻 @Mmd_bt 👈🏻
-                    شرایط در پی‌وی گفته میشه🍁
-                    #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
-
-                    برای پاسخگویی لطفا صبور باشید🤠
-
-                    @crazymind3''')
+            # if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
+            #     bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
+            #         👉🏻 @Mmd_bt 👈🏻
+            #         شرایط در پی‌وی گفته میشه🍁
+            #         #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
+            #
+            #         برای پاسخگویی لطفا صبور باشید🤠
+            #
+            #         @crazymind3''')
 
             if int(t1[-4:-2]) in self.delay and not self.sleep():
                 self.send_to_ch()
-
-                #             if int(t1[:-2]) == int(str(self.bed_time)[:-2]) + 11:
-                #                 bot.send_message(chat_id=self.channel_name, text="""⭕️ #خبرِ خوب داریم برای کانال های چندادمینه،کانال هایی که میخوان پیام هاشون به ترتیب و کم کم به داخلِ کانال بره تا درهمه ساعت ها کانالشون پیام داشته باشه⭕️
-                #
-                # 💟اگه به پیام های همین کانال توجه کرده باشید متوجه نظم توی ساعتِ فرستاده شدنشون میشین
-                #
-                # ✅ما از یه ربات استفاده میکنیم که یکی از بچه های خودِمون ساخته و توی فرستادنِ پیام کمک حالمون بوده
-                #
-                # ربات چندتا ویژگی برای نظارت به رشد ممبرها برای ادمین ها هم داره 👌🏻
-                # با @s_for_cna برای ربات درتماس باشید
-                # """)
 
         except Exception as E:
             logging.error('Task {}'.format(E))
@@ -544,13 +535,13 @@ class SSP:
         self.updater.start_polling()
         print('started')
 
-        dpa(CommandHandler('remain', self.remain, Filters.user([sina, lili, fery])))
-        dpa(CommandHandler('member', self.report_members, Filters.user([sina, lili, fery]), pass_args=True))
-        dpa(CommandHandler('admin', self.report_admins, Filters.user([sina, lili, fery]), pass_args=True))
-        dpa(CommandHandler('state', self.state, Filters.user([sina, lili, fery])))
-        dpa(CommandHandler('delay', self.set_delay, Filters.user([sina, lili, fery]), pass_args=True))
-        dpa(CommandHandler('bed', self.set_bed, Filters.user([sina, lili, fery]), pass_args=True))
-        dpa(CommandHandler('wake', self.set_wake, Filters.user([sina, lili, fery]), pass_args=True))
+        dpa(CommandHandler('remain', self.remain, Filters.user(admins)))
+        dpa(CommandHandler('member', self.report_members, Filters.user(admins), pass_args=True))
+        dpa(CommandHandler('admin', self.report_admins, Filters.user(admins), pass_args=True))
+        dpa(CommandHandler('state', self.state, Filters.user(admins)))
+        dpa(CommandHandler('delay', self.set_delay, Filters.user(admins), pass_args=True))
+        dpa(CommandHandler('bed', self.set_bed, Filters.user(admins), pass_args=True))
+        dpa(CommandHandler('wake', self.set_wake, Filters.user(admins), pass_args=True))
         dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
         job.run_repeating(callback=self.task, interval=60, first=0)
         self.updater.idle()
