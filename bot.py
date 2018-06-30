@@ -8,10 +8,8 @@ from PIL import Image
 import matplotlib
 import telegram
 import logging
-import psutil
 import pytz
 import time
-import sys
 import var
 import re
 import os
@@ -30,9 +28,9 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.delay = tuple(range(11, 60, 11))
-        self.bed_time = 30000
-        self.wake_time = 90000
+        self.delay = [600, 1200, 1800, 2100]
+        self.bed_time = 210000
+        self.wake_time = 60000
 
     @staticmethod
     def current_time():
@@ -60,22 +58,23 @@ class SSP:
 
     # region CommandHandlers
     # setters
-    def set_delay(self, bot, update, args):
-        try:
-            if args:
-                entry = str(args[0])
-                if entry.isdecimal():
-                    if 1 <= int(entry) < 60:
-                        entry = int(entry)
-                        if entry % 5 == 0 and entry <= 30:
-                            self.delay = tuple(range(0, 60, entry))
-                        else:
-                            self.delay = tuple(range(entry, 60, entry))
-                        bot.send_message(chat_id=update.message.chat_id,
-                                         text='delay = <b>{}</b> minute'.format(args[0]),
-                                         parse_mode='HTML')
-        except Exception as E:
-            bot.send_message(chat_id=update.message.chat_id, text='اشتباه: یک عدد صحیح بین ۱ تا ۵۹ بفرستید')
+
+    # def set_delay(self, bot, update, args):
+    #     try:
+    #         if args:
+    #             entry = str(args[0])
+    #             if entry.isdecimal():
+    #                 if 1 <= int(entry) < 60:
+    #                     entry = int(entry)
+    #                     if entry % 5 == 0 and entry <= 30:
+    #                         self.delay = tuple(range(0, 60, entry))
+    #                     else:
+    #                         self.delay = tuple(range(entry, 60, entry))
+    #                     bot.send_message(chat_id=update.message.chat_id,
+    #                                      text='delay = <b>{}</b> minute'.format(args[0]),
+    #                                      parse_mode='HTML')
+    #     except Exception as _:
+    #         bot.send_message(chat_id=update.message.chat_id, text='<b>Error</b>')
 
     def set_bed(self, bot, update, args):
         try:
@@ -103,7 +102,7 @@ class SSP:
         try:
             bot.send_message(chat_id=update.message.chat_id,
                              text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
-                                 self.delay[1] - self.delay[0], str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
+                                 self.delay, str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
                              parse_mode='HTML')
             logging.info("/state by {}".format(update.message.from_user))
         except Exception as E:
@@ -510,20 +509,7 @@ class SSP:
             if int(t1[:-2]) == 0:
                 self.add_member()
 
-            if int(t1[-4:-2]) == 0:
-                bot.send_message(chat_id=sina, text=str(psutil.virtual_memory()[2]) + ' - ' + str(sys.getsizeof(self)))
-
-            # if int(t1[:-2]) == int(str(self.bed_time)[:-2]):
-            #     bot.send_message(chat_id=self.channel_name, text='''دوستانِ عزیزی که تمایل به تبادل دارن به آیدیِ زیر پیام بدن
-            #         👉🏻 @Mmd_bt 👈🏻
-            #         شرایط در پی‌وی گفته میشه🍁
-            #         #اینجا_همه_چی_درهمه😂😢😭😈❤️💋💏💔
-            #
-            #         برای پاسخگویی لطفا صبور باشید🤠
-            #
-            #         @crazymind3''')
-
-            if int(t1[-4:-2]) in self.delay and not self.sleep():
+            if int(t1[:-2]) in self.delay and not self.sleep():
                 self.send_to_ch()
 
         except Exception as E:
@@ -539,11 +525,11 @@ class SSP:
         dpa(CommandHandler('member', self.report_members, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('admin', self.report_admins, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('state', self.state, Filters.user(admins)))
-        dpa(CommandHandler('delay', self.set_delay, Filters.user(admins), pass_args=True))
+        # dpa(CommandHandler('delay', self.set_delay, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('bed', self.set_bed, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('wake', self.set_wake, Filters.user(admins), pass_args=True))
         dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
-        job.run_repeating(callback=self.task, interval=60, first=0)
+        job.run_repeating(callback=self.task, interval=timedelta(minutes=1), first=0)
         self.updater.idle()
 
 
