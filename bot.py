@@ -244,19 +244,8 @@ class SSP:
         try:
             remaining = len(db_connect.execute(
                 "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
-            step = JalaliDatetime().strptime(' '.join(self.current_time()), '%Y-%m-%d %H%M%S')
-            rem = remaining
-
-            while remaining > 0:
-                if self.sleep(step.hour * 10000):
-                    step += timedelta(hours=self.wake_time / 10000 - step.hour)
-                if step.minute in self.delay and not step.minute == 0:
-                    remaining -= 1
-                step += timedelta(minutes=1)
-
-            if rem > 0:
-                text = '{} remaining\nchannel will feed until <b>{}</b>'.format(
-                    rem, step.strftime('%y-%m-%d -> %H:%M'))
+            if remaining > 0:
+                text = '{} remaining'.format(remaining)
             else:
                 text = '0 remaining'
             bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
@@ -388,6 +377,7 @@ class SSP:
             um = update.message
             ue = update.edited_message
             kind = name = text = file_id = 'none'
+            url = None
             if ue:
                 gp_id = ue.message_id
                 out = [cursor.execute("SELECT * FROM Queue WHERE gp = {0}".format(gp_id)).fetchall()][0][0]
@@ -407,10 +397,15 @@ class SSP:
                 in_date = ' '.join(self.current_time())
                 from_ad = um.from_user.id if um.from_user.id else 'none'
                 gp_id = um.message_id
+                if len(um.entities) > 0:
+                    entities = um.entities
+                    url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
                 if um.text:
-                    text = um.text
+                    text = um.text + '\n<a href="{}">​​​​​​​​​​​</a>'.format(url) if url else um.text
                     kind = 'text'
-                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text, gp=gp_id, in_date=in_date)
+                    url = 'url' if url else ''
+                    insert(kind=kind, from_ad=from_ad, file_id=file_id, caption=text,
+                           gp=gp_id, in_date=in_date, other=url)
                 else:
                     text = um.caption if um.caption else ''
                     other = None
@@ -463,7 +458,10 @@ class SSP:
                 logging.info('edit_msg msg_ID_in_db {}'.format(out[0]))
             elif out[8] == 0 or out[9] == 0:
                 if out[2] == 'text':
-                    ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
+                    if out[-1] == 'url':
+                        ch = self.robot.send_message(chat_id=self.channel_name, text=cp, parse_mode='HTML').message_id
+                    else:
+                        ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
                 elif out[2] == 'video':
                     # TODO set logo on videos
                     # form = out[12]
