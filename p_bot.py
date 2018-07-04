@@ -1,11 +1,10 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
-from khayyam import JalaliDate, JalaliDatetime
+from khayyam import JalaliDatetime
 from datetime import datetime, timedelta
 from pprint import pprint
 from database import *
 from PIL import Image
-import matplotlib
 import telegram
 import logging
 import pytz
@@ -13,8 +12,6 @@ import time
 import var
 import re
 import os
-matplotlib.use('AGG', force=True)
-import matplotlib.pyplot as plt
 
 # sina, lili, fery = 103086461, 303962908, 319801025
 admins = var.admins
@@ -41,41 +38,8 @@ class SSP:
         loc_dt = utc_dt.astimezone(eastern)
         return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
 
-    @staticmethod
-    def _before(year=None, months=None, plot='plot') -> list:
-        out = None
-        if year and months:
-            before = JalaliDate().strptime(year + months, '%Y%m') - timedelta(days=1)
-            if plot == 'plot':
-                out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
-                out.extend([i for i in db_connect.execute(
-                    "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
-            elif plot == 'pie':
-                out = [i[0] for i in db_connect.execute(
-                    "SELECT from_ad FROM Queue WHERE ch_a=1 AND out_date LIKE '{}-{}%'".format(
-                        year, months)).fetchall()]
-        return out
-
     # region CommandHandlers
     # setters
-
-    # def set_delay(self, bot, update, args):
-    #     try:
-    #         if args:
-    #             entry = str(args[0])
-    #             if entry.isdecimal():
-    #                 if 1 <= int(entry) < 60:
-    #                     entry = int(entry)
-    #                     if entry % 5 == 0 and entry <= 30:
-    #                         self.delay = tuple(range(0, 60, entry))
-    #                     else:
-    #                         self.delay = tuple(range(entry, 60, entry))
-    #                     bot.send_message(chat_id=update.message.chat_id,
-    #                                      text='delay = <b>{}</b> minute'.format(args[0]),
-    #                                      parse_mode='HTML')
-    #     except Exception as _:
-    #         bot.send_message(chat_id=update.message.chat_id, text='<b>Error</b>')
-
     def set_bed(self, bot, update, args):
         try:
             if args:
@@ -107,138 +71,6 @@ class SSP:
             logging.info("/state by {}".format(update.message.from_user))
         except Exception as E:
             logging.error("/state {} by {}".format(E, update.message.from_user))
-
-    def report_members(self, bot, update, args):
-        try:
-            param = days = out = months = year = title = plus = predict = None
-            if args:
-                param = str(args[0]).lower()
-                year_month = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
-                if re.fullmatch(r'd\d*', param):
-                    days = param[1:]
-                    out = [i for i in
-                           db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
-                    out = [j for j in reversed(out)]
-                    title = '{} days'.format(days)
-                    plus = True
-                elif re.fullmatch(r'm\d{,2}', param):
-                    months = param[1:].zfill(2)
-                    year = self.current_time()[0][:4]
-                    out = self._before(year, months)
-                    title = 'graph of {}-{}'.format(year, months)
-                    if year + months == str(self.current_time()[0].replace('-', '')[:6]):
-                        plus = predict = True
-                elif re.fullmatch(r'y\d{,2}', param):
-                    year = '13' + param[1:] if len(param) == 3 else param[1:]
-                    out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%'".format(year))]
-                    title = 'graph of {}'.format(year)
-                    if year == self.current_time()[0][:4]:
-                        plus = True
-                elif re.fullmatch(year_month, param):
-                    date = re.fullmatch(year_month, param)
-                    year = '13' + date.group('year') if len(date.group('year')) == 2 else date.group('year')
-                    months = date.group('month')
-                    out = self._before(year, months)
-                    title = 'graph of 20{}-{}'.format(year, months)
-                    if year + months == ''.join(self.current_time()[0].split('-'))[:6]:
-                        plus = True
-            else:
-                out = db_connect.execute("SELECT * FROM Mem_count").fetchall()
-                title = "starts from {}".format(out[0][1])
-                plus = True
-            if out:
-                members = [i for i in [j[3] for j in out]]
-                balance = [i for i in [j[2] for j in out]]
-                average = sum(balance) / len(balance)
-                caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-                    title, members[-1] - members[0], average, members[0], members[-1])
-                if plus:
-                    now = self.robot.get_chat_members_count(self.channel_name)
-                    balance.append(now - members[-1])
-                    members.append(now)
-                    average = sum(balance) / len(balance)
-                    caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-                        title, members[-1] - members[0], average, members[0], members[-1])
-                    days_of_this_month = JalaliDatetime.now().daysinmonth
-                    if predict and not (average * (days_of_this_month - len(members))) <= 0:
-                        pdt = int(members[-1] + (average * (days_of_this_month - len(members))))
-                        caption += '\npredict of month = {}'.format(pdt)
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-                    plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
-                             markersize=4)
-                else:
-                    plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
-                             markersize=4)
-                plt.grid()
-                plt.xlim(1, )
-                plt.xlabel('days')
-                plt.ylabel('members')
-                plt.title(title)
-                plt.legend(loc=4)
-                plt.savefig('plot/plot.png')
-                bot.send_photo(chat_id=update.message.chat_id, photo=open('plot/plot.png', 'rb'), caption=caption)
-                plt.close()
-            logging.info('plot:: args {} -- by: {}'.format(args, update.message.from_user))
-        except TimeoutError:
-            pass
-        except Exception as E:
-            self.robot.send_message(chat_id=update.message.chat_id,
-                                    text='**ERROR {}**'.format(update.message.text),
-                                    parse_mode='Markdown')
-            logging.error("Could't get plot:: args {} -- {} - by: {}".format(args, E, update.message.from_user))
-
-    def report_admins(self, bot, update, args):
-        try:
-            param = out = title = None
-            if args:
-                pattern = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
-                param = str(args[0]).lower()
-                if re.fullmatch(r'm\d{,2}', param):
-                    months = param[1:].zfill(2)
-                    year = self.current_time()[0][:4]
-                    out = self._before(year, months, plot='pie')
-                    title = 'graph of {}-{}'.format(year, months)
-                elif re.fullmatch(pattern, param):
-                    date = re.fullmatch(pattern, param)
-                    year = '13' + date.group('year') if len(date.group('year')) == 2 else date.group('year')
-                    months = date.group('month').zfill(2)
-                    out = self._before(year, months, plot='pie')
-                    title = 'graph of {}-{}'.format(year, months)
-            else:
-                out = [i[0] for i in db_connect.execute("SELECT from_ad FROM Queue WHERE ch_a=1").fetchall()]
-                title = 'graph of all time'
-            tmp = set(out.copy())
-            admins = {}
-            for i in tmp:
-                admins[str(i)] = out.count(i)
-            for k in admins.keys():
-                try:
-                    j = self.robot.get_chat(k).to_dict()
-                    if j.get('first_name') and j.get('last_name'):
-                        count = admins[k]
-                        del admins[k]
-                        admins[(' '.join([j['first_name']] + [j['last_name']]))] = count
-                    elif j.get('first_name'):
-                        count = admins[k]
-                        del admins[k]
-                        admins[j['first_name']] = count
-                except Exception as E:
-                    pass
-            ex = [[x, y] for x, y in admins.items()]
-            data = [x[1] for x in ex]
-            labels = ["{}\n{}".format(x[0], x[1]) for x in ex]
-            explode = [0.1 for _ in labels]
-            plt.figure(figsize=(12.80, 7.20))
-            plt.title(title)
-            plt.axes(aspect=1)
-            plt.pie(x=data, labels=labels, explode=explode, startangle=90,
-                    autopct='%1.1f%%', radius=1.25, labeldistance=1.14, pctdistance=.9)
-            plt.savefig('plot/pie.jpg')
-            bot.send_photo(photo=open('plot/pie.jpg', 'rb'), chat_id=update.message.chat_id)
-            plt.close()
-            os.remove('./plot/pie.jpg')
-        except Exception as E:
-            logging.error('report admins {}'.format(E))
 
     def remain(self, bot, update):
         try:
@@ -288,13 +120,11 @@ class SSP:
         if re.search(pattern, entry):
             state = re.findall(pattern, entry)
             for state in state:
-                if state.lower() not in (var.channel_name, '@mmd_bt'):
+                if state.lower() not in (var.channel_name, ):
                     entry = re.sub(state, var.channel_name, entry)
-            if entry.lower().strip()[len(self.channel_name) * (-2):].find(var.channel_name) == -1:
-                entry = entry + '\n' + var.channel_name
             return entry
         else:
-            return entry + '\n' + var.channel_name
+            return entry
 
     def image_watermark(self, photo, caption) -> str:
         try:
@@ -433,7 +263,7 @@ class SSP:
                     if kind in ('photo', 'video', 'document', 'vid', 'voice', 'audio', 'v_note'):
                         insert(kind=kind, from_ad=from_ad, file_id=file_id,
                                caption=text, gp=gp_id, in_date=in_date, other=other)
-
+            logging.info('save')
         except Exception as E:
             logging.error('save {}'.format(E))
 
@@ -520,10 +350,7 @@ class SSP:
         print('started')
 
         dpa(CommandHandler('remain', self.remain, Filters.user(admins)))
-        dpa(CommandHandler('member', self.report_members, Filters.user(admins), pass_args=True))
-        dpa(CommandHandler('admin', self.report_admins, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('state', self.state, Filters.user(admins)))
-        # dpa(CommandHandler('delay', self.set_delay, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('bed', self.set_bed, Filters.user(admins), pass_args=True))
         dpa(CommandHandler('wake', self.set_wake, Filters.user(admins), pass_args=True))
         dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
