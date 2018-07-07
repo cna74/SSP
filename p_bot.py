@@ -44,8 +44,12 @@ class SSP:
 
     def help(self, bot, update):
         try:
-            bot.send_message(chat_id=update.message.chat_id,
-                             text='/group <on-off>\n/sticker <on-off>\n/photo <on-off>\n/video <on-off>\n/doc <on-off>')
+            self.robot.send_message(chat_id=update.message.chat_id,
+                                    text='/group <on-off>\n'
+                                         '/sticker <on-off>\n'
+                                         '/photo <on-off>\n'
+                                         '/video <on-off>\n'
+                                         '/doc <on-off>')
         except Exception as E:
             logging.error('help {}'.format(E))
 
