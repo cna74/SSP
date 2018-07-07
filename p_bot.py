@@ -1,7 +1,8 @@
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from telegram.ext import Updater, MessageHandler, CommandHandler, ConversationHandler, CallbackQueryHandler, Filters
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from khayyam import JalaliDatetime
-from datetime import datetime, timedelta
+from datetime import datetime
 from pprint import pprint
 from database import *
 from PIL import Image
@@ -25,9 +26,12 @@ class SSP:
         self.updater = Updater(token)
         self.channel_name = var.channel_name
         self.group_id = var.group_id
-        self.delay = [600, 1200, 1800, 2100]
-        self.bed_time = 210000
-        self.wake_time = 60000
+        self.chat_group = var.chat_group
+        self.allow = True
+        self.sticker = True
+        self.photo = True
+        self.video = True
+        self.document = True
 
     @staticmethod
     def current_time():
@@ -38,72 +42,32 @@ class SSP:
         loc_dt = utc_dt.astimezone(eastern)
         return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
 
-    # region CommandHandlers
-    # setters
-    def set_bed(self, bot, update, args):
+    def help(self, bot, update):
         try:
-            if args:
-                entry = str(args[0])
-                if 0 <= int(entry) < 24:
-                    bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                     text='<b>bed</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
-                    self.bed_time = int(entry) * 10000
+            bot.send_message(chat_id=update.message.chat_id,
+                             text='/group <on-off>\n/sticker <on-off>\n/photo <on-off>\n/video <on-off>\n/doc <on-off>')
         except Exception as E:
-            bot.send_message(chat_id=update.message.chat_id, text='ERROR')
-
-    def set_wake(self, bot, update, args):
-        try:
-            if args:
-                entry = str(args[0])
-                if 0 <= int(entry) < 24:
-                    bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                     text='<b>wake</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
-                    self.wake_time = int(entry) * 10000
-        except Exception as E:
-            bot.send_message(chat_id=update.message.chat_id, text='ERROR')
+            logging.error('help {}'.format(E))
 
     def state(self, bot, update):
         try:
+            j = ['on' if i is True else 'off' for i in
+                 (self.allow, self.sticker, self.photo, self.video, self.document)]
             bot.send_message(chat_id=update.message.chat_id,
-                             text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
-                                 self.delay, str(self.bed_time)[:-4], str(self.wake_time)[:-4]),
+                             text='group <b>{}</b>\nsticker <b>{}</b>\nphoto <b>{}</b>\nvideo <b>{}</b>\ndoc <b>{}</b>'.format(
+                                 *j),
                              parse_mode='HTML')
-            logging.info("/state by {}".format(update.message.from_user))
         except Exception as E:
-            logging.error("/state {} by {}".format(E, update.message.from_user))
+            logging.error('state {}'.format(E))
 
-    def remain(self, bot, update):
+    def send_db(self, bot, update):
         try:
-            remaining = len(db_connect.execute(
-                "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
-            if remaining > 0:
-                text = '{} remaining'.format(remaining)
-            else:
-                text = '0 remaining'
-            bot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
-            logging.info("remain by {}".format(update.message.from_user))
+            self.robot.send_document(chat_id=update.message.from_user.id, document='./bot_db.db', caption='database')
+            logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
         except Exception as E:
-            logging.error("Could't get remaining time by {}".format(update.message.from_user))
+            logging.error('send_db {}'.format(E))
 
-    # endregion
-
-    def add_member(self):
-        try:
-            cu = self.current_time()
-            mem = [self.robot.get_chat_members_count(self.channel_name)]
-            try:
-                last = db_connect.execute("SELECT members FROM Mem_count ORDER BY ID DESC LIMIT 1").fetchone()
-            except IndexError:
-                last = mem[0]
-            last = last if last else mem
-            cursor.execute("INSERT INTO Mem_count(ddd, balance, members) VALUES(?,?,?)",
-                           (cu[0], mem[0] - last[0], mem[0]))
-            db_connect.commit()
-            self.robot.send_document(document=open('bot_db.db', 'rb'), caption=' '.join(self.current_time()),
-                                     chat_id=sina)
-            logging.info('members{}'.format(mem[0]))
-        except Exception as E:
-            logging.error('add members {}'.format(E))
+    # region channel_part
 
     def id_remove(self, entry):
         pattern = re.compile(r'(@\S+)', re.I)
@@ -120,7 +84,7 @@ class SSP:
         if re.search(pattern, entry):
             state = re.findall(pattern, entry)
             for state in state:
-                if state.lower() not in (var.channel_name, ):
+                if state.lower() not in (var.channel_name,):
                     entry = re.sub(state, var.channel_name, entry)
             return entry
         else:
@@ -143,9 +107,9 @@ class SSP:
                 lg = Image.open('logo/CC.png')
                 res, lg_sz = bg.size, lg.size
                 if res[0] > res[1]:
-                    n_def = (res[1]//div, res[1]//div)
+                    n_def = (res[1] // div, res[1] // div)
                 else:
-                    n_def = (res[0]//div, res[0]//div)
+                    n_def = (res[0] // div, res[0] // div)
 
                 lg.thumbnail(n_def, Image.ANTIALIAS)
                 lg_sz = lg.size
@@ -176,7 +140,7 @@ class SSP:
     def gif_watermark(self, gif, form, caption) -> str:
         try:
             caption = str(caption)
-            file = 'vid/tmp.'+form
+            file = 'vid/tmp.' + form
             pattern = re.compile(r':\d:')
             find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else 7
             self.robot.getFile(gif).download(file)
@@ -186,7 +150,7 @@ class SSP:
             pos = {1: ('left', 'top'), 2: ('center', 'top'), 3: ('right', 'top'),
                    4: ('left', 'center'), 5: ('center', 'center'), 6: ('right', 'center'),
                    7: ('left', 'bottom'), 8: ('center', 'bottom'), 9: ('right', 'bottom')}
-            size = h//5 if w > h else w//5
+            size = h // 5 if w > h else w // 5
 
             logo = ImageClip("logo/CC.png") \
                 .set_duration(clip.duration) \
@@ -324,24 +288,334 @@ class SSP:
         finally:
             db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()))
 
-    def sleep(self, entry=None):
-        entry = int(self.current_time()[1]) if not entry else int(entry)
-        if entry >= self.bed_time > self.wake_time < entry or entry >= self.bed_time < self.wake_time > entry:
-            return True
-        return False
-
     def task(self, bot, job):
         try:
-            t1 = self.current_time()[1]
-
-            if int(t1[:-2]) == 0:
-                self.add_member()
-
-            if int(t1[:-2]) in self.delay and not self.sleep():
-                self.send_to_ch()
-
+            self.send_to_ch()
+            self.robot.send_document(chat_id=admins[0], document='./bot_db.db', caption='database')
         except Exception as E:
             logging.error('Task {}'.format(E))
+
+    # endregion
+
+    # region group
+    def manage(self, bot, update):
+        try:
+            text = update.message.text if update.message.text else ''
+            user_id = update.message.from_user.id
+            link = re.compile(r'(((http(s)?):/+(www\.)?\w+\.\w+)|((www\.)?\w+\.\w+)|(http(s)?))', re.IGNORECASE)
+            joined = None
+
+            try:
+                if self.robot.get_chat_member(self.channel_name, user_id):
+                    joined = True
+            except:
+                joined = False
+
+            if user_id not in admins:
+                if not self.allow or len(re.findall(link, text)) > 0 or not joined:
+                    self.robot.delete_message(self.chat_group, update.message.message_id)
+
+                elif update.message.photo and not self.photo:
+                    self.robot.delete_message(self.chat_group, update.message.message_id)
+                elif (update.message.video or update.message.video_note) and not self.video:
+                    self.robot.delete_message(self.chat_group, update.message.message_id)
+                elif update.message.sticker and not self.sticker:
+                    self.robot.delete_message(self.chat_group, update.message.message_id)
+                elif update.message.document and not self.document:
+                    self.robot.delete_message(self.chat_group, update.message.message_id)
+
+            # new member
+            if len(update.message.new_chat_members) > 0:
+                new_member = update.message.new_chat_members[0]
+                self.robot.send_message(chat_id=update.message.chat_id,
+                                        text='سلام <a href={}>{}</a> خوش آمدید برای استفاده از گروه ابتدا در کانال @VOB10 عضو شوید'.format(
+                                            new_member.username, new_member.first_name),
+                                        reply_to_message_id=update.message.message_id,
+                                        parse_mode='HTML',
+                                        reply_markup=InlineKeyboardMarkup(
+                                            [[Inline('VOB10', url='https://t.me/{}'.format(self.channel_name[1:]))]]),
+                                        one_time_keyboard=True, resize_keyboard=True)
+        except Exception as E:
+            logging.error('manage {}'.format(E))
+
+    def toggle(self, key, b):
+        if key == 'group':
+            self.allow = b
+        elif key == 'sticker':
+            self.sticker = b
+        elif key == 'photo':
+            self.photo = b
+        elif key == 'video':
+            self.video = b
+        elif key == 'doc':
+            self.document = b
+
+    def turn(self, bot, update, args):
+        try:
+            key = update.message.text.split()[0][1:]
+            entry = args[0]
+            switch = ('group', 'sticker', 'photo', 'video', 'doc')
+            key = key if key in switch else False
+            if key:
+                if entry == 'on':
+                    self.toggle(key, b=True)
+                    self.robot.send_message(chat_id=update.message.chat_id,
+                                            text='{} <b>unlocked</b>'.format(key),
+                                            reply_to_message_id=update.message.message_id,
+                                            parse_mode='HTML')
+                elif re.fullmatch(r'\d{,2}\s\d{,2}', entry):
+                    pass  # TODO fix it
+                elif entry == 'off':
+                    self.toggle(key, b=False)
+                    self.robot.send_message(chat_id=update.message.chat_id,
+                                            text='{} <b>locked up</b>'.format(key),
+                                            reply_to_message_id=update.message.message_id,
+                                            parse_mode='HTML')
+                else:
+                    self.robot.send_message(chat_id=update.message.chat_id,
+                                            text='Error <b>{}</b>\n<b>on</b> or <b>off</b>'.format(entry),
+                                            reply_to_message_id=update.message.message_id,
+                                            parse_mode='HTML')
+
+            logging.info('turn {} {}'.format(update.message.from_user, entry))
+        except Exception as E:
+            logging.error('turn user:{} args:{} E:{}'.format(update.message.from_user, args, E))
+
+    # endregion
+
+    # region contact
+    def register(self, bot, update):
+        try:
+            um = update.message
+            user_id = um.from_user.id
+            chat_id = um.chat_id
+            message_id = um.message_id
+            user = cursor.execute("SELECT * FROM Student WHERE user_id = {0}".format(user_id, )).fetchone()
+            if user is None:
+                self.robot.send_message(chat_id=chat_id,
+                                        text="سلام {} \n"
+                                             "اگر مایل هستید نام خود را وارد کنید"
+                                             " در غیر اینصورت skip را انتخاب کنید".format(
+                                            '{} {}'.format(um.from_user.first_name, um.from_user.last_name)),
+                                        reply_to_message_id=message_id,
+                                        parse_mode='HTML',
+                                        reply_markup=InlineKeyboardMarkup(
+                                            [[Inline('skip', callback_data='skip'),
+                                              Inline('cancel', callback_data='cancel')]]),
+                                        one_time_keyboard=True, resize_keyboard=True)
+                return self.get_name
+            else:
+                name, number = user[2], user[3]
+                self.robot.send_message(chat_id=chat_id,
+                                        text='شما با نام {} و شماره {} در لیست ما حضور دارید\n'
+                                             'آیا مایلید اطلاعات خود را تغییر دهید؟'.format(name, number),
+                                        reply_to_message_id=message_id,
+                                        reply_markup=InlineKeyboardMarkup(
+                                            [[Inline('نام', callback_data='name'),
+                                              Inline('شماره', callback_data='number')],
+                                             [Inline('OK', callback_data='ok')]]
+                                        ))
+                return self.edit_or_name_or_number
+        except Exception as E:
+            logging.error('register {}'.format(E))
+
+    def get_name(self, bot, update):
+        try:
+            name = chat_id = message_id = user_id = None
+            if update.callback_query:
+                um = update.callback_query
+                user_id = um.from_user.id
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
+                if um.data == 'skip':
+                    first = um.from_user.first_name
+                    last = um.from_user.first_name if isinstance(um.from_user.last_name, str) else ''
+                    name = '{} {}'.format(first, last).strip()
+                elif um.data == 'cancel':
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='لغو عملیات',
+                                            reply_to_message_id=message_id)
+                    return ConversationHandler.END
+            else:
+                um = update.message
+                chat_id = um.chat_id
+                message_id = um.message_id
+                name = '{}'.format(um.text)
+            cursor.execute("INSERT INTO "
+                           "Student(user_id, name) VALUES(?,?)", (user_id, name))
+            db_connect.commit()
+            self.robot.send_photo(chat_id=chat_id,
+                                  caption='<b>{}</b>:\n'
+                                          'حالا مثل تصویر شماره تلفنت share my contact رو در اختیارمون بزار'
+                                          ' تا کارشناسامون باهات تماس بگیرن '
+                                          'یا اگر میخوای با یه شماره دیگه'
+                                          ' در ارتباط باشیم خودت برامون بنویس'.format(name),
+                                  photo=open('sample.png', 'rb'),
+                                  reply_to_message_id=message_id,
+                                  parse_mode='HTML',
+                                  reply_markup=InlineKeyboardMarkup(
+                                      [[Inline('cancel', callback_data='/cancel')]]
+                                  ))
+            return self.confirm
+        except Exception as E:
+            logging.error('get_name {}'.format(E))
+
+    def confirm(self, bot, update):
+        try:
+            phone_number = message_id = chat_id = None
+            if update.message:
+                um = update.message
+                user_id = um.from_user.id
+                chat_id = um.chat_id
+                message_id = um.message_id
+                phone_number = um.text if um.text else um.contact.phone_number
+                name = cursor.execute("SELECT name FROM Student WHERE user_id = {0}".format(user_id)).fetchone()[0]
+                if not re.fullmatch(r'(^(989|09)\d{9}$)', phone_number):
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='شماره وارد شده صحیح نیست دقت کنید که شماره با حروف لاتین 09 آغاز شود',
+                                            reply_to_message_id=message_id)
+                    return self.confirm
+                elif um.text or um.contact:
+                    phone_number = '0' + str(phone_number)[2:] if str(phone_number).startswith('98') else phone_number
+                    db_connect.execute("UPDATE Student SET number=? WHERE user_id = ?", (phone_number, user_id))
+                    db_connect.commit()
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='تبریک\n'
+                                                 'ثبت نام شما تکمیل شد به زودی کارشناسان ما با شما تماس میگیرند\n'
+                                                 'اگر مایل ب تغییر مشخصات خود دارید از گزینه Edit استفاده کنید\n'
+                                                 'در غیر اینصورت OK را انتخاب کنید\n'
+                                                 'نام: {}\n'
+                                                 'شماره تماس: {}\n'.format(name, phone_number),
+                                            reply_to_message_id=message_id,
+                                            reply_markup=InlineKeyboardMarkup(
+                                                [[Inline('OK', callback_data='ok'),
+                                                  Inline('Edit', callback_data='edit')],
+                                                 [Inline('cancel', callback_data='/cancel')]]))
+
+                    return self.edit_or_name_or_number
+        except Exception as E:
+            logging.error('confirm {}'.format(E))
+
+    def edit_or_name_or_number(self, bot, update):
+        if update.callback_query:
+            um = update.callback_query
+            chat_id = um.message.chat_id
+            message_id = um.message.message_id
+            user_id = um.from_user.id
+            name, phone_number = cursor.execute(
+                "SELECT name, number FROM Student WHERE user_id = {0}".format(user_id)).fetchone()
+            if um.data == 'name':
+                self.robot.edit_message_text(chat_id=chat_id,
+                                             message_id=message_id,
+                                             text='نام جدید را وارد کنید',
+                                             reply_markup=InlineKeyboardMarkup(
+                                                 [[Inline('cancel', callback_data='cancel')]]))
+                return self.edit_name
+            elif um.data == 'number':
+                self.robot.edit_message_text(chat_id=chat_id,
+                                             message_id=message_id,
+                                             text='شماره جدید را وارد کنید',
+                                             reply_markup=InlineKeyboardMarkup(
+                                                 [[Inline('cancel', callback_data='cancel')]]))
+                return self.edit_number
+            elif um.data == 'ok':
+                self.robot.edit_message_text(text='تمام\n'
+                                                  'نام: {}\n'
+                                                  'شماره: {}\n'.format(name, phone_number),
+                                             chat_id=chat_id,
+                                             message_id=message_id)
+                return ConversationHandler.END
+            elif um.data == 'edit':
+                self.robot.send_message(chat_id=chat_id,
+                                        text='کدام:\n'
+                                             'نام: {}\n'
+                                             'شماره: {}\n'.format(name, phone_number),
+                                        reply_to_message_id=message_id,
+                                        reply_markup=InlineKeyboardMarkup([[Inline('نام', callback_data='name')],
+                                                                           [Inline('شماره',
+                                                                                   callback_data='number')]]))
+                return self.edit_or_name_or_number
+
+    def edit_name(self, bot, update):
+        try:
+            if update.message:
+                um = update.message
+                name = um.text
+                chat_id = um.chat_id
+                message_id = um.message_id
+                user_id = um.from_user.id
+                db_connect.execute("UPDATE Student SET name=? WHERE user_id = ?", (name, user_id))
+                db_connect.commit()
+                self.robot.send_message(text='نام: {}\n'
+                                             'تغییر دیگری در سر دارید؟'.format(name),
+                                        chat_id=chat_id,
+                                        reply_to_message_id=message_id,
+                                        reply_markup=InlineKeyboardMarkup(
+                                            [[Inline('نام', callback_data='name'),
+                                              Inline('شماره', callback_data='number'),
+                                              Inline('OK', callback_data='ok')]]))
+                return self.edit_or_name_or_number
+            elif update.callback_query:
+                um = update.callback_query
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
+                if um.data == 'cancel':
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='لغو عملیات',
+                                            reply_to_message_id=message_id)
+                    return ConversationHandler.END
+        except Exception as E:
+            logging.error('edit_name {}'.format(E))
+
+    def edit_number(self, bot, update):
+        try:
+            if update.message:
+                um = update.message
+                chat_id = um.chat_id
+                message_id = um.message_id
+                user_id = um.from_user.id
+                phone_number = um.text if um.text else um.contact.phone_number
+                phone_number = '0' + str(phone_number)[2:] if str(phone_number).startswith('98') else phone_number
+                if not re.fullmatch(r'(^(989|09)\d{9}$)', phone_number):
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='شماره وارد شده صحیح نیست دقت کنید که شماره با حروف لاتین 09 آغاز شود',
+                                            reply_to_message_id=message_id)
+                    return self.edit_number
+                db_connect.execute("UPDATE Student SET number=? WHERE user_id = ?", (phone_number, user_id))
+                db_connect.commit()
+                self.robot.send_message(text='شماره: {}\n'
+                                             'تغییر دیگری در سر دارید؟'.format(phone_number),
+                                        chat_id=chat_id,
+                                        reply_markup=InlineKeyboardMarkup(
+                                            [[Inline('نام', callback_data='name'),
+                                              Inline('شماره', callback_data='number'),
+                                              Inline('OK', callback_data='ok')]]))
+                return self.edit_or_name_or_number
+            elif update.callback_query:
+                um = update.callback_query
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
+                if um.data == 'cancel':
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='لغو عملیات',
+                                            reply_to_message_id=message_id)
+                    return ConversationHandler.END
+        except Exception as E:
+            logging.error('edit_number {}'.format(E))
+
+    def cancel(self, bot, update):
+        try:
+            um = update.message
+            chat_id = um.chat_id
+            message_id = um.message_id
+            self.robot.send_message(chat_id=chat_id,
+                                    text='لغو عملیات',
+                                    reply_to_message_id=message_id)
+            return ConversationHandler.END
+        except Exception as E:
+            logging.error('cancel {}'.format(E))
+
+    # endregion
 
     def start(self):
         dpa = self.updater.dispatcher.add_handler
@@ -349,12 +623,44 @@ class SSP:
         self.updater.start_polling()
         print('started')
 
-        dpa(CommandHandler('remain', self.remain, Filters.user(admins)))
-        dpa(CommandHandler('state', self.state, Filters.user(admins)))
-        dpa(CommandHandler('bed', self.set_bed, Filters.user(admins), pass_args=True))
-        dpa(CommandHandler('wake', self.set_wake, Filters.user(admins), pass_args=True))
-        dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
-        job.run_repeating(callback=self.task, interval=timedelta(minutes=1), first=0)
+        dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins)))
+        # channel
+        dpa(CommandHandler(command='help', callback=self.help, filters=Filters.user(admins)))
+        dpa(CommandHandler(command=['group', 'sticker', 'photo', 'video', 'doc'],
+                           callback=self.turn, filters=Filters.user(admins), pass_args=True))
+
+        dpa(MessageHandler(Filters.chat(self.group_id), lambda x, y: print(y.message.chat_id), edited_updates=True))
+
+        # group
+        dpa(MessageHandler(Filters.chat(self.chat_group), self.manage))
+
+        # contact
+        dpa(ConversationHandler(entry_points=[CommandHandler(command='register',
+                                                             callback=self.register,
+                                                             filters=Filters.private)],
+                                states={
+                                    self.get_name: [CallbackQueryHandler(self.get_name, ),
+                                                    MessageHandler(Filters.text, self.get_name)],
+
+                                    self.confirm: [CallbackQueryHandler(self.confirm),
+                                                   MessageHandler(Filters.contact, self.confirm),
+                                                   MessageHandler(Filters.text, self.confirm)],
+
+                                    self.edit_or_name_or_number: [CallbackQueryHandler(self.edit_or_name_or_number),
+                                                                  CommandHandler(['name', 'number'],
+                                                                                 callback=self.edit_or_name_or_number)],
+
+                                    self.edit_name: [CallbackQueryHandler(self.edit_name),
+                                                     MessageHandler(Filters.text, callback=self.edit_name)],
+
+                                    self.edit_number: [CallbackQueryHandler(self.edit_number),
+                                                       MessageHandler(Filters.text, callback=self.edit_number)]
+                                },
+                                fallbacks=[CallbackQueryHandler(self.cancel),
+                                           CommandHandler('cancel', self.cancel)]))
+
+        job.run_daily(callback=self.task, time=datetime.time(datetime.strptime('06:00', '%H:%M')))
+
         self.updater.idle()
 
 

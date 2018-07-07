@@ -20,16 +20,11 @@ def create_db():
                            "in_date DATE,"
                            "out_date DATE,"
                            "other TEXT);")
-        db_connect.execute("CREATE TABLE IF NOT EXISTS Activity("
-                           "ID INTEGER PRIMARY KEY AUTOINCREMENT DEFAULT 0,"
-                           "admin_name TEXT,"
+        db_connect.execute("CREATE TABLE IF NOT EXISTS Student("
+                           "ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
                            "user_id INTEGER,"
-                           "message_count INTEGER);")
-        db_connect.execute("CREATE TABLE IF NOT EXISTS Mem_count("
-                           "ID INTEGER PRIMARY KEY AUTOINCREMENT,"
-                           "ddd TEXT,"
-                           "balance INTEGER DEFAULT 0,"
-                           "members INTEGER);")
+                           "name TEXT,"
+                           "number TEXT);")
         db_connect.commit()
     except Exception as E:
         print(E)
