@@ -33,6 +33,8 @@ class SSP:
         self.video = True
         self.document = True
 
+    # region general
+
     @staticmethod
     def current_time():
         utc = pytz.utc
@@ -42,7 +44,7 @@ class SSP:
         loc_dt = utc_dt.astimezone(eastern)
         return JalaliDatetime().now().strftime('%Y-%m-%d'), loc_dt.strftime('%H%M%S')
 
-    def help(self, bot, update):
+    def help(self, _, update):
         try:
             self.robot.send_message(chat_id=update.message.chat_id,
                                     text='/group <on-off>\n'
@@ -53,23 +55,37 @@ class SSP:
         except Exception as E:
             logging.error('help {}'.format(E))
 
-    def state(self, bot, update):
+    def state(self, _, update):
         try:
             j = ['on' if i is True else 'off' for i in
                  (self.allow, self.sticker, self.photo, self.video, self.document)]
-            bot.send_message(chat_id=update.message.chat_id,
-                             text='group <b>{}</b>\nsticker <b>{}</b>\nphoto <b>{}</b>\nvideo <b>{}</b>\ndoc <b>{}</b>'.format(
-                                 *j),
-                             parse_mode='HTML')
+            self.robot.send_message(chat_id=update.message.chat_id,
+                                    text='group <b>{}</b>\nsticker <b>{}</b>\nphoto <b>{}</b>\nvideo <b>{}</b>\ndoc <b>{}</b>'.format(
+                                        *j),
+                                    parse_mode='HTML')
         except Exception as E:
             logging.error('state {}'.format(E))
 
-    def send_db(self, bot, update):
+    def send_db(self, _, update):
         try:
             self.robot.send_document(chat_id=update.message.from_user.id, document='./bot_db.db', caption='database')
             logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
         except Exception as E:
             logging.error('send_db {}'.format(E))
+
+    def welcome(self, _, update):
+        try:
+            self.robot.send_message(chat_id=update.message.chat_id,
+                                    text='''
+                                    🎖داوطلبِ گرامی سلاااام☺️ ، به رباتِ " ثبتِ نام " طرحِ تابستانه VOB خوش آمدید⚔️
+ابتدا گزینه👈  reg/  را بزنید!                                    
+                                    ''',
+                                    reply_to_message_id=update.message.message_id,
+                                    parse_mode=telegram.ParseMode.MARKDOWN)
+        except Exception as E:
+            logging.error('welcome {}'.format(E))
+
+    # endregion
 
     # region channel_part
 
@@ -388,7 +404,7 @@ class SSP:
     # endregion
 
     # region contact
-    def register(self, bot, update):
+    def register(self, _, update):
         try:
             um = update.message
             user_id = um.from_user.id
@@ -397,33 +413,27 @@ class SSP:
             user = cursor.execute("SELECT * FROM Student WHERE user_id = {0}".format(user_id, )).fetchone()
             if user is None:
                 self.robot.send_message(chat_id=chat_id,
-                                        text="سلام {} \n"
-                                             "اگر مایل هستید نام خود را وارد کنید"
-                                             " در غیر اینصورت skip را انتخاب کنید".format(
-                                            '{} {}'.format(um.from_user.first_name, um.from_user.last_name)),
-                                        reply_to_message_id=message_id,
-                                        parse_mode='HTML',
-                                        reply_markup=InlineKeyboardMarkup(
-                                            [[Inline('skip', callback_data='skip'),
-                                              Inline('cancel', callback_data='cancel')]]),
-                                        one_time_keyboard=True, resize_keyboard=True)
+                                        text='''
+                                        🎓 خب عزیزم حالا " نام_نام خانوادگی" خودت رو وارد کن!✍️
+                                        ''',
+                                        reply_to_message_id=message_id, )
                 return self.get_name
             else:
-                name, number = user[2], user[3]
+                name, number, grade = user[2], user[3], user[4]
                 self.robot.send_message(chat_id=chat_id,
-                                        text='شما با نام {} و شماره {} در لیست ما حضور دارید\n'
-                                             'آیا مایلید اطلاعات خود را تغییر دهید؟'.format(name, number),
+                                        text='شما با نام {} و شماره {} در مقطع {} در لیست ما حضور دارید\n'
+                                             'آیا مایلید اطلاعات خود را تغییر دهید؟'.format(name, number, grade),
                                         reply_to_message_id=message_id,
                                         reply_markup=InlineKeyboardMarkup(
                                             [[Inline('نام', callback_data='name'),
-                                              Inline('شماره', callback_data='number')],
-                                             [Inline('OK', callback_data='ok')]]
-                                        ))
-                return self.edit_or_name_or_number
+                                              Inline('شماره', callback_data='number'),
+                                              Inline('مقطع', callback_data='grade')],
+                                             [Inline('OK', callback_data='ok')]]))
+                return self.edit_or_name_or_number_or_grade
         except Exception as E:
             logging.error('register {}'.format(E))
 
-    def get_name(self, bot, update):
+    def get_name(self, _, update):
         try:
             name = chat_id = message_id = user_id = None
             if update.callback_query:
@@ -431,40 +441,49 @@ class SSP:
                 user_id = um.from_user.id
                 chat_id = um.message.chat_id
                 message_id = um.message.message_id
-                if um.data == 'skip':
-                    first = um.from_user.first_name
-                    last = um.from_user.first_name if isinstance(um.from_user.last_name, str) else ''
-                    name = '{} {}'.format(first, last).strip()
-                elif um.data == 'cancel':
-                    self.robot.send_message(chat_id=chat_id,
-                                            text='لغو عملیات',
-                                            reply_to_message_id=message_id)
-                    return ConversationHandler.END
             else:
                 um = update.message
                 chat_id = um.chat_id
+                user_id = um.from_user.id
                 message_id = um.message_id
                 name = '{}'.format(um.text)
-            cursor.execute("INSERT INTO "
-                           "Student(user_id, name) VALUES(?,?)", (user_id, name))
+            cursor.execute("INSERT INTO Student(user_id, name) VALUES(?,?)", (user_id, name))
             db_connect.commit()
-            self.robot.send_photo(chat_id=chat_id,
-                                  caption='<b>{}</b>:\n'
-                                          'حالا مثل تصویر شماره تلفنت share my contact رو در اختیارمون بزار'
-                                          ' تا کارشناسامون باهات تماس بگیرن '
-                                          'یا اگر میخوای با یه شماره دیگه'
-                                          ' در ارتباط باشیم خودت برامون بنویس'.format(name),
-                                  photo=open('sample.png', 'rb'),
-                                  reply_to_message_id=message_id,
-                                  parse_mode='HTML',
-                                  reply_markup=InlineKeyboardMarkup(
-                                      [[Inline('cancel', callback_data='/cancel')]]
-                                  ))
-            return self.confirm
+            self.robot.send_message(chat_id=chat_id,
+                                    text="""
+                                    🎖بسیار عالی ، "سالِ چندم_چه رشته ای" هستی ؟؟👊
+                                    """,
+                                    reply_to_message_id=message_id,
+                                    reply_markup=InlineKeyboardMarkup(
+                                        [[Inline('📚دهم تجربی', callback_data='10'),
+                                          Inline('📚یازدهم تجربی', callback_data='11'),
+                                          Inline('📚دوازدهم تجربی', callback_data='12')],
+                                         [Inline('📚فارغ التحصیل', callback_data='20')]]
+                                    ))
+            return self.get_grade
         except Exception as E:
             logging.error('get_name {}'.format(E))
 
-    def confirm(self, bot, update):
+    def get_grade(self, _, update):
+        try:
+            if update.callback_query:
+                um = update.callback_query
+                user_id = um.from_user.id
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
+                grade = um.data
+                db_connect.execute("UPDATE Student SET grade=? WHERE user_id = ?", (grade, user_id))
+                db_connect.commit()
+                self.robot.edit_message_text(chat_id=chat_id,
+                                             text="""
+                                        🎖 حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو  جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️
+                                        """,
+                                             message_id=message_id)
+                return self.get_number_and_finish
+        except Exception as E:
+            logging.error('get_grade {}'.format(E))
+
+    def get_number_and_finish(self, _, update):
         try:
             phone_number = message_id = chat_id = None
             if update.message:
@@ -484,63 +503,82 @@ class SSP:
                     db_connect.execute("UPDATE Student SET number=? WHERE user_id = ?", (phone_number, user_id))
                     db_connect.commit()
                     self.robot.send_message(chat_id=chat_id,
-                                            text='تبریک\n'
-                                                 'ثبت نام شما تکمیل شد به زودی کارشناسان ما با شما تماس میگیرند\n'
-                                                 'اگر مایل ب تغییر مشخصات خود دارید از گزینه Edit استفاده کنید\n'
-                                                 'در غیر اینصورت OK را انتخاب کنید\n'
-                                                 'نام: {}\n'
-                                                 'شماره تماس: {}\n'.format(name, phone_number),
+                                            text="""🎖بسیار عالی ، اطلاعاتِ شما با موفقیت ثبت شد✅ ، کارشناسان 👨‍⚕و مشاورین👩‍⚕ به زودی با شما تماس خواهند گرفت🤙\n
+اگر همه موارد رو درست پر کردید تایید رو انتخاب کن اگر میخوای چیزیو تغییر بدی یکی از موارد پایین رو انتخاب کن
+                                            """,
                                             reply_to_message_id=message_id,
-                                            reply_markup=InlineKeyboardMarkup(
-                                                [[Inline('OK', callback_data='ok'),
-                                                  Inline('Edit', callback_data='edit')],
-                                                 [Inline('cancel', callback_data='/cancel')]]))
+                                            reply_markup=InlineKeyboardMarkup([[Inline('تایید', callback_data='ok')],
+                                                                               [Inline('نام',
+                                                                                       callback_data='name'),
+                                                                                Inline('شماره',
+                                                                                       callback_data='number'),
+                                                                                Inline('مقطع',
+                                                                                       callback_data='grade')]]))
 
-                    return self.edit_or_name_or_number
+                    return self.edit_or_name_or_number_or_grade
         except Exception as E:
             logging.error('confirm {}'.format(E))
 
-    def edit_or_name_or_number(self, bot, update):
-        if update.callback_query:
-            um = update.callback_query
-            chat_id = um.message.chat_id
-            message_id = um.message.message_id
-            user_id = um.from_user.id
-            name, phone_number = cursor.execute(
-                "SELECT name, number FROM Student WHERE user_id = {0}".format(user_id)).fetchone()
-            if um.data == 'name':
-                self.robot.edit_message_text(chat_id=chat_id,
-                                             message_id=message_id,
-                                             text='نام جدید را وارد کنید',
-                                             reply_markup=InlineKeyboardMarkup(
-                                                 [[Inline('cancel', callback_data='cancel')]]))
-                return self.edit_name
-            elif um.data == 'number':
-                self.robot.edit_message_text(chat_id=chat_id,
-                                             message_id=message_id,
-                                             text='شماره جدید را وارد کنید',
-                                             reply_markup=InlineKeyboardMarkup(
-                                                 [[Inline('cancel', callback_data='cancel')]]))
-                return self.edit_number
-            elif um.data == 'ok':
-                self.robot.edit_message_text(text='تمام\n'
-                                                  'نام: {}\n'
-                                                  'شماره: {}\n'.format(name, phone_number),
-                                             chat_id=chat_id,
-                                             message_id=message_id)
-                return ConversationHandler.END
-            elif um.data == 'edit':
-                self.robot.send_message(chat_id=chat_id,
-                                        text='کدام:\n'
-                                             'نام: {}\n'
-                                             'شماره: {}\n'.format(name, phone_number),
-                                        reply_to_message_id=message_id,
-                                        reply_markup=InlineKeyboardMarkup([[Inline('نام', callback_data='name')],
-                                                                           [Inline('شماره',
-                                                                                   callback_data='number')]]))
-                return self.edit_or_name_or_number
+    def edit_or_name_or_number_or_grade(self, _, update):
+        try:
+            if update.callback_query:
+                um = update.callback_query
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
+                user_id = um.from_user.id
+                name, phone_number, grade = cursor.execute(
+                    "SELECT name, number, grade FROM Student WHERE user_id = {0}".format(user_id)).fetchone()
+                if um.data == 'name':
+                    self.robot.edit_message_text(chat_id=chat_id,
+                                                 message_id=message_id,
+                                                 text='نام جدید را وارد کنید',
+                                                 reply_markup=InlineKeyboardMarkup(
+                                                     [[Inline('بی خیال', callback_data='cancel')]]))
+                    return self.edit_name
+                elif um.data == 'number':
+                    self.robot.edit_message_text(chat_id=chat_id,
+                                                 message_id=message_id,
+                                                 text='شماره جدید را وارد کنید',
+                                                 reply_markup=InlineKeyboardMarkup(
+                                                     [[Inline('بی خیال', callback_data='cancel')]]))
+                    return self.edit_number
+                elif um.data == 'grade':
+                    self.robot.edit_message_text(chat_id=chat_id,
+                                                 message_id=message_id,
+                                                 text='سال چندم چه رشته ای هستی؟',
+                                                 reply_markup=InlineKeyboardMarkup(
+                                                     [[Inline('📚دهم تجربی', callback_data='10'),
+                                                       Inline('📚یازدهم تجربی', callback_data='11'),
+                                                       Inline('📚دوازدهم تجربی', callback_data='12')],
+                                                      [Inline('📚فارغ التحصیل', callback_data='20')],
+                                                      [Inline('بی خیال', callback_data='cancel')]]))
+                    return self.edit_grade
+                elif um.data == 'ok':
+                    self.robot.edit_message_text(text='تمام\n'
+                                                      'نام: {}\n'
+                                                      'شماره: {}\n'
+                                                      'مقطع: {}\n'.format(name, phone_number, grade),
+                                                 chat_id=chat_id,
+                                                 message_id=message_id)
+                    return ConversationHandler.END
+                elif um.data == 'edit':
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='کدام:\n'
+                                                 'نام: {}\n'
+                                                 'شماره: {}\n'
+                                                 'مقطع: {}\n'.format(name, phone_number, grade),
+                                            reply_to_message_id=message_id,
+                                            reply_markup=InlineKeyboardMarkup([[Inline('نام',
+                                                                                       callback_data='name')],
+                                                                               [Inline('شماره',
+                                                                                       callback_data='number'),
+                                                                                Inline('مقطع',
+                                                                                       callback_data='grade')]]))
+                    return self.edit_or_name_or_number_or_grade
+        except Exception as E:
+            logging.error('edit_or_name_or_number_or_grade {}'.format(E))
 
-    def edit_name(self, bot, update):
+    def edit_name(self, _, update):
         try:
             if update.message:
                 um = update.message
@@ -558,7 +596,7 @@ class SSP:
                                             [[Inline('نام', callback_data='name'),
                                               Inline('شماره', callback_data='number'),
                                               Inline('OK', callback_data='ok')]]))
-                return self.edit_or_name_or_number
+                return self.edit_or_name_or_number_or_grade
             elif update.callback_query:
                 um = update.callback_query
                 chat_id = um.message.chat_id
@@ -571,7 +609,38 @@ class SSP:
         except Exception as E:
             logging.error('edit_name {}'.format(E))
 
-    def edit_number(self, bot, update):
+    def edit_grade(self, _, update):
+        try:
+            if update.callback_query:
+                um = update.callback_query
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
+                user_id = um.from_user.id
+
+                if not um.data == 'cancel':
+                    grade = um.data
+                    db_connect.execute("UPDATE Student SET grade=? WHERE user_id = ?", (grade, user_id))
+                    db_connect.commit()
+                    self.robot.send_message(text='مقطع: {}\n'
+                                                 'تغییر دیگری در سر دارید؟'.format(grade),
+                                            chat_id=chat_id,
+                                            reply_to_message_id=message_id,
+                                            reply_markup=InlineKeyboardMarkup(
+                                                [[Inline('نام', callback_data='name'),
+                                                  Inline('شماره', callback_data='number'),
+                                                  Inline('مقطع', callback_data='grade')],
+                                                 [Inline('خیر', callback_data='ok')]]))
+                    return self.edit_or_name_or_number_or_grade
+
+                elif um.data == 'cancel':
+                    self.robot.send_message(chat_id=chat_id,
+                                            text='لغو عملیات',
+                                            reply_to_message_id=message_id)
+                    return ConversationHandler.END
+        except Exception as E:
+            logging.error('edit_grade {}'.format(E))
+
+    def edit_number(self, _, update):
         try:
             if update.message:
                 um = update.message
@@ -594,7 +663,7 @@ class SSP:
                                             [[Inline('نام', callback_data='name'),
                                               Inline('شماره', callback_data='number'),
                                               Inline('OK', callback_data='ok')]]))
-                return self.edit_or_name_or_number
+                return self.edit_or_name_or_number_or_grade
             elif update.callback_query:
                 um = update.callback_query
                 chat_id = um.message.chat_id
@@ -607,7 +676,7 @@ class SSP:
         except Exception as E:
             logging.error('edit_number {}'.format(E))
 
-    def cancel(self, bot, update):
+    def cancel(self, _, update):
         try:
             um = update.message
             chat_id = um.chat_id
@@ -628,6 +697,7 @@ class SSP:
         print('started')
 
         dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins)))
+        dpa(CommandHandler('start', callback=self.welcome, filters=Filters.private))
         # channel
         dpa(CommandHandler(command='help', callback=self.help, filters=Filters.user(admins)))
         dpa(CommandHandler(command=['group', 'sticker', 'photo', 'video', 'doc'],
@@ -639,26 +709,35 @@ class SSP:
         dpa(MessageHandler(Filters.chat(self.chat_group), self.manage))
 
         # contact
-        dpa(ConversationHandler(entry_points=[CommandHandler(command='register',
+        dpa(ConversationHandler(entry_points=[CommandHandler(command='reg',
                                                              callback=self.register,
                                                              filters=Filters.private)],
                                 states={
                                     self.get_name: [CallbackQueryHandler(self.get_name, ),
                                                     MessageHandler(Filters.text, self.get_name)],
 
-                                    self.confirm: [CallbackQueryHandler(self.confirm),
-                                                   MessageHandler(Filters.contact, self.confirm),
-                                                   MessageHandler(Filters.text, self.confirm)],
+                                    self.get_grade: [CallbackQueryHandler(self.get_grade, ),
+                                                     CommandHandler(['10', '11', '12', '20'], self.get_grade)],
 
-                                    self.edit_or_name_or_number: [CallbackQueryHandler(self.edit_or_name_or_number),
-                                                                  CommandHandler(['name', 'number'],
-                                                                                 callback=self.edit_or_name_or_number)],
+                                    self.get_number_and_finish: [CallbackQueryHandler(self.get_number_and_finish),
+                                                                 MessageHandler(Filters.contact,
+                                                                                self.get_number_and_finish),
+                                                                 MessageHandler(Filters.text,
+                                                                                self.get_number_and_finish)],
+
+                                    self.edit_or_name_or_number_or_grade: [
+                                        CallbackQueryHandler(self.edit_or_name_or_number_or_grade),
+                                        CommandHandler(['name', 'number', 'grade', 'edit', 'ok'],
+                                                       callback=self.edit_or_name_or_number_or_grade)],
 
                                     self.edit_name: [CallbackQueryHandler(self.edit_name),
                                                      MessageHandler(Filters.text, callback=self.edit_name)],
 
                                     self.edit_number: [CallbackQueryHandler(self.edit_number),
-                                                       MessageHandler(Filters.text, callback=self.edit_number)]
+                                                       MessageHandler(Filters.text, callback=self.edit_number)],
+
+                                    self.edit_grade: [CallbackQueryHandler(self.edit_grade),
+                                                      MessageHandler(Filters.text, callback=self.edit_grade)],
                                 },
                                 fallbacks=[CallbackQueryHandler(self.cancel),
                                            CommandHandler('cancel', self.cancel)]))

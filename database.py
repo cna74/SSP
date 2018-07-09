@@ -24,7 +24,8 @@ def create_db():
                            "ID INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,"
                            "user_id INTEGER,"
                            "name TEXT,"
-                           "number TEXT);")
+                           "number TEXT,"
+                           "grade INTEGER);")
         db_connect.commit()
     except Exception as E:
         print(E)
