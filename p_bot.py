@@ -27,7 +27,9 @@ class SSP:
         self.channel_name = var.channel_name
         self.group_id = var.group_id
         self.chat_group = var.chat_group
-        self.allow = True
+
+        # True means lock
+        self.group = True
         self.sticker = True
         self.photo = True
         self.video = True
@@ -58,7 +60,7 @@ class SSP:
     def state(self, _, update):
         try:
             j = ['on' if i is True else 'off' for i in
-                 (self.allow, self.sticker, self.photo, self.video, self.document)]
+                 (self.group, self.sticker, self.photo, self.video, self.document)]
             self.robot.send_message(chat_id=update.message.chat_id,
                                     text='group <b>{}</b>\nsticker <b>{}</b>\nphoto <b>{}</b>\nvideo <b>{}</b>\ndoc <b>{}</b>'.format(
                                         *j),
@@ -318,9 +320,22 @@ class SSP:
     # endregion
 
     # region group
-    def manage(self, bot, update):
+    def check_switch(self, switch, entry=None) -> bool:
+        entry = int(self.current_time()[1][:-4]) if not entry else int(entry)
+        if isinstance(switch, tuple):
+            if entry >= switch[0] > switch[1] < entry or entry >= switch[0] < switch[1] > entry:
+                return True
+            return False
+        elif isinstance(switch, bool):
+            return True if switch else False
+
+    def manage(self, _, update):
         try:
-            text = update.message.text if update.message.text else ''
+            if update.message.text:
+                text = update.message.text if update.message.text else ''
+            else:
+                text = update.message.caption if update.message.caption else ''
+
             user_id = update.message.from_user.id
             link = re.compile(r'(((http(s)?):/+(www\.)?\w+\.\w+)|((www\.)?\w+\.\w+)|(http(s)?))', re.IGNORECASE)
             joined = None
@@ -332,26 +347,25 @@ class SSP:
                 joined = False
 
             if user_id not in admins:
-                if not self.allow or len(re.findall(link, text)) > 0 or not joined:
+                if self.check_switch(self.group) or len(re.findall(link, text)) > 0 or not joined:
                     self.robot.delete_message(self.chat_group, update.message.message_id)
 
-                elif update.message.photo and not self.photo:
+                elif update.message.photo and not self.check_switch(self.photo):
                     self.robot.delete_message(self.chat_group, update.message.message_id)
-                elif (update.message.video or update.message.video_note) and not self.video:
+                elif (update.message.video or update.message.video_note) and not self.check_switch(self.video):
                     self.robot.delete_message(self.chat_group, update.message.message_id)
-                elif update.message.sticker and not self.sticker:
+                elif update.message.sticker and not self.check_switch(self.sticker):
                     self.robot.delete_message(self.chat_group, update.message.message_id)
-                elif update.message.document and not self.document:
+                elif update.message.document and not self.check_switch(self.document):
                     self.robot.delete_message(self.chat_group, update.message.message_id)
 
             # new member
             if len(update.message.new_chat_members) > 0:
                 new_member = update.message.new_chat_members[0]
                 self.robot.send_message(chat_id=update.message.chat_id,
-                                        text='سلام <a href={}>{}</a> خوش آمدید برای استفاده از گروه ابتدا در کانال @VOB10 عضو شوید'.format(
-                                            new_member.username, new_member.first_name),
+                                        text='سلام {} خوش آمدید برای استفاده از گروه ابتدا در کانال @VOB10 عضو شوید'.format(
+                                            new_member.first_name),
                                         reply_to_message_id=update.message.message_id,
-                                        parse_mode='HTML',
                                         reply_markup=InlineKeyboardMarkup(
                                             [[Inline('VOB10', url='https://t.me/{}'.format(self.channel_name[1:]))]]),
                                         one_time_keyboard=True, resize_keyboard=True)
@@ -359,8 +373,11 @@ class SSP:
             logging.error('manage {}'.format(E))
 
     def toggle(self, key, b):
+        if isinstance(b, tuple):
+            b = (int(b[0]), int(b[1]))
+
         if key == 'group':
-            self.allow = b
+            self.group = b
         elif key == 'sticker':
             self.sticker = b
         elif key == 'photo':
@@ -370,32 +387,37 @@ class SSP:
         elif key == 'doc':
             self.document = b
 
-    def turn(self, bot, update, args):
+    def turn(self, _, update, args):
         try:
             key = update.message.text.split()[0][1:]
-            entry = args[0]
+            entry = ' '.join(args).strip()
             switch = ('group', 'sticker', 'photo', 'video', 'doc')
             key = key if key in switch else False
             if key:
                 if entry == 'on':
                     self.toggle(key, b=True)
                     self.robot.send_message(chat_id=update.message.chat_id,
-                                            text='{} <b>unlocked</b>'.format(key),
+                                            text='{} **unlocked**'.format(key),
                                             reply_to_message_id=update.message.message_id,
-                                            parse_mode='HTML')
+                                            parse_mode=telegram.ParseMode.MARKDOWN)
                 elif re.fullmatch(r'\d{,2}\s\d{,2}', entry):
-                    pass  # TODO fix it
+                    from_, until = entry.split()
+                    self.toggle(key, (from_, until))
+                    self.robot.send_message(chat_id=update.message.chat_id,
+                                            text='{} **locked up** from {} until {}'.format(key, from_, until),
+                                            reply_to_message_id=update.message.message_id,
+                                            parse_mode=telegram.ParseMode.MARKDOWN)
                 elif entry == 'off':
                     self.toggle(key, b=False)
                     self.robot.send_message(chat_id=update.message.chat_id,
-                                            text='{} <b>locked up</b>'.format(key),
+                                            text='{} **locked up**'.format(key),
                                             reply_to_message_id=update.message.message_id,
-                                            parse_mode='HTML')
+                                            parse_mode=telegram.ParseMode.MARKDOWN)
                 else:
                     self.robot.send_message(chat_id=update.message.chat_id,
-                                            text='Error <b>{}</b>\n<b>on</b> or <b>off</b>'.format(entry),
+                                            text='Error **{}**\n**on** or **off**'.format(entry),
                                             reply_to_message_id=update.message.message_id,
-                                            parse_mode='HTML')
+                                            parse_mode=telegram.ParseMode.MARKDOWN)
 
             logging.info('turn {} {}'.format(update.message.from_user, entry))
         except Exception as E:
@@ -497,7 +519,7 @@ class SSP:
                     self.robot.send_message(chat_id=chat_id,
                                             text='شماره وارد شده صحیح نیست دقت کنید که شماره با حروف لاتین 09 آغاز شود',
                                             reply_to_message_id=message_id)
-                    return self.confirm
+                    return self.get_number_and_finish
                 elif um.text or um.contact:
                     phone_number = '0' + str(phone_number)[2:] if str(phone_number).startswith('98') else phone_number
                     db_connect.execute("UPDATE Student SET number=? WHERE user_id = ?", (phone_number, user_id))
@@ -517,7 +539,7 @@ class SSP:
 
                     return self.edit_or_name_or_number_or_grade
         except Exception as E:
-            logging.error('confirm {}'.format(E))
+            logging.error('get_number_and_finish {}'.format(E))
 
     def edit_or_name_or_number_or_grade(self, _, update):
         try:
@@ -703,7 +725,7 @@ class SSP:
         dpa(CommandHandler(command=['group', 'sticker', 'photo', 'video', 'doc'],
                            callback=self.turn, filters=Filters.user(admins), pass_args=True))
 
-        dpa(MessageHandler(Filters.chat(self.group_id), lambda x, y: print(y.message.chat_id), edited_updates=True))
+        # dpa(MessageHandler(Filters.chat(self.group_id), lambda x, y: print(y.message.chat_id), edited_updates=True))
 
         # group
         dpa(MessageHandler(Filters.chat(self.chat_group), self.manage))
