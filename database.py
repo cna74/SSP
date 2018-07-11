@@ -25,7 +25,7 @@ def create_db():
                            "user_id INTEGER,"
                            "name TEXT,"
                            "number TEXT,"
-                           "grade INTEGER);")
+                           "grade TEXT);")
         db_connect.commit()
     except Exception as E:
         print(E)

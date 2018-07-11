@@ -36,7 +36,6 @@ class SSP:
         self.document = True
 
     # region general
-
     @staticmethod
     def current_time():
         utc = pytz.utc
@@ -59,19 +58,25 @@ class SSP:
 
     def state(self, _, update):
         try:
-            j = ['on' if i is True else 'off' for i in
+            j = ['on' if i is self.check_switch(i) else 'off' for i in
                  (self.group, self.sticker, self.photo, self.video, self.document)]
             self.robot.send_message(chat_id=update.message.chat_id,
-                                    text='group <b>{}</b>\nsticker <b>{}</b>\nphoto <b>{}</b>\nvideo <b>{}</b>\ndoc <b>{}</b>'.format(
+                                    text='group **{}**\nsticker **{}**\nphoto **{}**\nvideo **{}**\ndoc **{}**'.format(
                                         *j),
-                                    parse_mode='HTML')
+                                    parse_mode=telegram.ParseMode.MARKDOWN)
         except Exception as E:
             logging.error('state {}'.format(E))
 
-    def send_db(self, _, update):
+    def send_db(self, _, update, args):
         try:
-            self.robot.send_document(chat_id=update.message.from_user.id, document='./bot_db.db', caption='database')
-            logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
+            if args:
+                self.send_student(n=args[0])
+                logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
+            else:
+                self.robot.send_document(chat_id=update.message.from_user.id,
+                                         document=open('./bot_db.db', 'rb'),
+                                         caption='database')
+                logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
         except Exception as E:
             logging.error('send_db {}'.format(E))
 
@@ -90,8 +95,8 @@ class SSP:
     # endregion
 
     # region channel_part
-
-    def id_remove(self, entry):
+    @staticmethod
+    def id_remove(entry):
         pattern = re.compile(r'(@\S+)', re.I)
         pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
         pattern2 = re.compile(r'https://t\.me\S*')
@@ -310,7 +315,7 @@ class SSP:
         finally:
             db_set(ch=ch, i_d=out[0], out_date=' '.join(self.current_time()))
 
-    def task(self, bot, job):
+    def task(self, _, __):
         try:
             self.send_to_ch()
             self.robot.send_document(chat_id=admins[0], document='./bot_db.db', caption='database')
@@ -343,7 +348,7 @@ class SSP:
             try:
                 if self.robot.get_chat_member(self.channel_name, user_id):
                     joined = True
-            except:
+            except Exception:
                 joined = False
 
             if user_id not in admins:
@@ -363,8 +368,8 @@ class SSP:
             if len(update.message.new_chat_members) > 0:
                 new_member = update.message.new_chat_members[0]
                 self.robot.send_message(chat_id=update.message.chat_id,
-                                        text='سلام {} خوش آمدید برای استفاده از گروه ابتدا در کانال @VOB10 عضو شوید'.format(
-                                            new_member.first_name),
+                                        text='سلام {} خوش آمدید برای استفاده'
+                                             ' از گروه ابتدا در کانال @VOB10 عضو شوید'.format(new_member.first_name),
                                         reply_to_message_id=update.message.message_id,
                                         reply_markup=InlineKeyboardMarkup(
                                             [[Inline('VOB10', url='https://t.me/{}'.format(self.channel_name[1:]))]]),
@@ -426,6 +431,18 @@ class SSP:
     # endregion
 
     # region contact
+    def send_student(self, n: int = None, user_id=None):
+        try:
+            if n:
+                stds = cursor.execute("SELECT name,number,grade FROM Student ORDER BY ID DESC LIMIT ?", (n,)).fetchall()
+                stds = '\n'.join(['🤓{} 📲{} 📚{}'.format(i[0], i[1], i[2]) for i in stds])
+                self.robot.send_message(sina, str(stds))
+            elif user_id:
+                std = cursor.execute("SELECT * FROM Student WHERE user_id = ?", (user_id,)).fetchone()
+                self.robot.send_message(sina, str(std[2:]))
+        except Exception as E:
+            logging.error('send student {}'.format(E))
+
     def register(self, _, update):
         try:
             um = update.message
@@ -498,7 +515,8 @@ class SSP:
                 db_connect.commit()
                 self.robot.edit_message_text(chat_id=chat_id,
                                              text="""
-                                        🎖 حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو  جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️
+                                        🎖 حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو
+                                          جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️
                                         """,
                                              message_id=message_id)
                 return self.get_number_and_finish
@@ -582,6 +600,7 @@ class SSP:
                                                       'مقطع: {}\n'.format(name, phone_number, grade),
                                                  chat_id=chat_id,
                                                  message_id=message_id)
+                    self.send_student(user_id=user_id)
                     return ConversationHandler.END
                 elif um.data == 'edit':
                     self.robot.send_message(chat_id=chat_id,
@@ -718,7 +737,7 @@ class SSP:
         self.updater.start_polling()
         print('started')
 
-        dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins)))
+        dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins), pass_args=True))
         dpa(CommandHandler('start', callback=self.welcome, filters=Filters.private))
         # channel
         dpa(CommandHandler(command='help', callback=self.help, filters=Filters.user(admins)))
