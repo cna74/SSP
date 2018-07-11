@@ -102,7 +102,7 @@ class SSP:
                 text = '{} remaining'.format(rem)
             else:
                 text = '0 remaining'
-            self.robot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
+            self.robot.send_message(chat_id=update.message.chat_id, text=text)
             logging.info("remain by {}".format(update.message.from_user))
         except Exception as E:
             logging.error("remain: {} {}".format(E, update.message.from_user))
@@ -763,7 +763,7 @@ class SSP:
         dpa(CommandHandler(command=['group', 'sticker', 'photo', 'video', 'doc'],
                            callback=self.turn, filters=Filters.user(admins), pass_args=True))
 
-        dpa(MessageHandler(Filters.chat(self.chat_group), self.manage, edited_updates=True))
+        dpa(MessageHandler(Filters.chat(self.chat_group), self.save, edited_updates=True))
 
         # group
         dpa(MessageHandler(Filters.chat(self.chat_group), self.manage))
