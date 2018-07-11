@@ -17,6 +17,7 @@ import os
 # sina, lili, fery = 103086461, 303962908, 319801025
 admins = var.admins
 sina = var.sina
+pouriya = var.pouriya
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
@@ -90,6 +91,21 @@ class SSP:
                                     parse_mode=telegram.ParseMode.MARKDOWN)
         except Exception as E:
             logging.error('welcome {}'.format(E))
+
+    def remain(self, _, update):
+        try:
+            remaining = len(db_connect.execute(
+                "SELECT ID FROM Queue WHERE sent=0 and caption not like '.%' and caption not like '/%'").fetchall())
+            rem = remaining
+
+            if rem > 0:
+                text = '{} remaining'.format(rem)
+            else:
+                text = '0 remaining'
+            self.robot.send_message(chat_id=update.message.chat_id, text=text, parse_mode='HTML')
+            logging.info("remain by {}".format(update.message.from_user))
+        except Exception as E:
+            logging.error("remain: {} {}".format(E, update.message.from_user))
 
     # endregion
 
@@ -436,10 +452,10 @@ class SSP:
             if n:
                 stds = cursor.execute("SELECT name,number,grade FROM Student ORDER BY ID DESC LIMIT ?", (n,)).fetchall()
                 stds = '\n'.join(['🤓{} 📲{} 📚{}'.format(i[0], i[1], i[2]) for i in stds])
-                self.robot.send_message(sina, str(stds))
+                self.robot.send_message(pouriya, str(stds))
             elif user_id:
                 std = cursor.execute("SELECT * FROM Student WHERE user_id = ?", (user_id,)).fetchone()
-                self.robot.send_message(sina, str(std[2:]))
+                self.robot.send_message(pouriya, str(std[2:]))
         except Exception as E:
             logging.error('send student {}'.format(E))
 
@@ -789,5 +805,5 @@ class SSP:
         self.updater.idle()
 
 
-timer = SSP(var.TOKEN)
-timer.start()
+vob = SSP(var.TOKEN)
+vob.start()
