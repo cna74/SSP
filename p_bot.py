@@ -342,7 +342,7 @@ class SSP:
 
             user_id = update.message.from_user.id
             link = re.compile(r'(((http(s)?):/+(www\.)?\w+\.\w+)|((www\.)?\w+\.\w+)|(http(s)?))', re.IGNORECASE)
-            joined = None
+            joined = is_admin = None
 
             try:
                 if self.robot.get_chat_member(self.channel_name, user_id):
@@ -350,7 +350,8 @@ class SSP:
             except Exception:
                 joined = False
 
-            if user_id not in admins:
+            group_admins = [i.user.id for i in self.robot.get_chat_administrators(self.group_id)]
+            if user_id not in group_admins:
                 if self.check_switch(self.group) or len(re.findall(link, text)) > 0 or not joined:
                     self.robot.delete_message(self.chat_group, update.message.message_id)
 
@@ -738,12 +739,13 @@ class SSP:
 
         dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins), pass_args=True))
         dpa(CommandHandler('start', callback=self.welcome, filters=Filters.private))
+
         # channel
         dpa(CommandHandler(command='help', callback=self.help, filters=Filters.user(admins)))
         dpa(CommandHandler(command=['group', 'sticker', 'photo', 'video', 'doc'],
                            callback=self.turn, filters=Filters.user(admins), pass_args=True))
 
-        # dpa(MessageHandler(Filters.chat(self.group_id), lambda x, y: print(y.message.chat_id), edited_updates=True))
+        dpa(MessageHandler(Filters.chat(self.chat_group), self.manage, edited_updates=True))
 
         # group
         dpa(MessageHandler(Filters.chat(self.chat_group), self.manage))
