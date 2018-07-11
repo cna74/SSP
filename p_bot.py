@@ -763,7 +763,7 @@ class SSP:
         dpa(CommandHandler(command=['group', 'sticker', 'photo', 'video', 'doc'],
                            callback=self.turn, filters=Filters.user(admins), pass_args=True))
 
-        dpa(MessageHandler(Filters.chat(self.chat_group), self.save, edited_updates=True))
+        dpa(MessageHandler(Filters.chat(self.group_id), self.save, edited_updates=True))
 
         # group
         dpa(MessageHandler(Filters.chat(self.chat_group), self.manage))
