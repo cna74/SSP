@@ -30,11 +30,11 @@ class SSP:
         self.chat_group = var.chat_group
 
         # True means lock
-        self.group = True
-        self.sticker = True
-        self.photo = True
-        self.video = True
-        self.document = True
+        self.group = False
+        self.sticker = False
+        self.photo = False
+        self.video = False
+        self.document = False
 
     # region general
     @staticmethod
