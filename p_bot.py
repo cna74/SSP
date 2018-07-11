@@ -73,9 +73,8 @@ class SSP:
                 self.send_student(n=args[0])
                 logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
             else:
-                self.robot.send_document(chat_id=update.message.from_user.id,
-                                         document=open('./bot_db.db', 'rb'),
-                                         caption='database')
+                self.send_student(n=10)
+                self.robot.send_document(chat_id=sina, document=open('./bot_db.db', 'rb'), caption='database')
                 logging.info('send_db {} {}'.format(update.message.from_user.id, update.message.from_user.first_name))
         except Exception as E:
             logging.error('send_db {}'.format(E))
