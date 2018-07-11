@@ -753,8 +753,10 @@ class SSP:
         self.updater.start_polling()
         print('started')
 
-        dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins), pass_args=True))
         dpa(CommandHandler('start', callback=self.welcome, filters=Filters.private))
+
+        dpa(CommandHandler('db', callback=self.send_db, filters=Filters.user(admins), pass_args=True))
+        dpa(CommandHandler('remain', callback=self.remain, filters=Filters.user(admins)))
 
         # channel
         dpa(CommandHandler(command='help', callback=self.help, filters=Filters.user(admins)))
