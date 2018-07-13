@@ -299,15 +299,9 @@ class SSP:
                     else:
                         ch = self.robot.send_message(chat_id=self.channel_name, text=cp).message_id
                 elif out[2] == 'video':
-                    # TODO set logo on videos
-                    # form = out[12]
-                    # cp = self.gif_watermark(vid=out[3], form=form, caption=out[4])
                     ch = self.robot.send_video(chat_id=self.channel_name, video=out[3], caption=cp).message_id
                 elif out[2] == 'photo':
-                    cp = self.image_watermark(out[3], out[4])
-                    ch = self.robot.send_photo(chat_id=self.channel_name, photo=open('image/out.jpg', 'rb'),
-                                               caption=cp).message_id
-                    os.remove('./image/out.jpg')
+                    ch = self.robot.send_photo(chat_id=self.channel_name, photo=out[3], caption=cp).message_id
                 elif out[2] == 'audio':
                     ch = self.robot.send_audio(chat_id=self.channel_name, audio=out[3], caption=cp).message_id
                 elif out[2] == 'document':
@@ -317,11 +311,7 @@ class SSP:
                 elif out[2] == 'voice':
                     ch = self.robot.send_voice(chat_id=self.channel_name, voice=out[3], caption=cp).message_id
                 elif out[2] == 'vid':
-                    form = out[12]
-                    cp = self.gif_watermark(gif=out[3], form=form, caption=out[4])
-                    ch = self.robot.send_document(chat_id=self.channel_name, document=open('vid/out.mp4', 'rb'),
-                                                  caption=cp).message_id
-                    os.remove('./vid/out.mp4')
+                    ch = self.robot.send_document(chat_id=self.channel_name, document=out[3], caption=cp).message_id
                 logging.info('send_to_ch msg_ID_in_db {}'.format(out[0]))
         except IndexError:
             pass
@@ -453,9 +443,11 @@ class SSP:
                 stds = cursor.execute("SELECT name,number,grade FROM Student ORDER BY ID DESC LIMIT ?", (n,)).fetchall()
                 stds = '\n'.join(['🤓{} 📲{} 📚{}'.format(i[0], i[1], i[2]) for i in stds])
                 self.robot.send_message(pouriya, str(stds))
+                self.robot.send_message(sina, str(stds))
             elif user_id:
                 std = cursor.execute("SELECT * FROM Student WHERE user_id = ?", (user_id,)).fetchone()
                 self.robot.send_message(pouriya, str(std[2:]))
+                self.robot.send_message(sina, str(std[2:]))
         except Exception as E:
             logging.error('send student {}'.format(E))
 
