@@ -436,7 +436,7 @@ class SSP:
 
     # endregion
 
-    # region contact
+    # region student
     def send_student(self, n: int = None, user_id=None):
         try:
             if n:
@@ -467,6 +467,7 @@ class SSP:
                 return self.get_name
             else:
                 name, number, grade = user[2], user[3], user[4]
+                grade = 'فارق التحصیل' if grade == '20' else grade
                 self.robot.send_message(chat_id=chat_id,
                                         text='شما با نام {} و شماره {} در مقطع {} در لیست ما حضور دارید\n'
                                              'آیا مایلید اطلاعات خود را تغییر دهید؟'.format(name, number, grade),
@@ -523,8 +524,7 @@ class SSP:
                 db_connect.commit()
                 self.robot.edit_message_text(chat_id=chat_id,
                                              text="""
-                                        🎖 حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو
-                                          جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️
+                                حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️
                                         """,
                                              message_id=message_id)
                 return self.get_number_and_finish
@@ -576,6 +576,7 @@ class SSP:
                 user_id = um.from_user.id
                 name, phone_number, grade = cursor.execute(
                     "SELECT name, number, grade FROM Student WHERE user_id = {0}".format(user_id)).fetchone()
+                grade = 'فارق التحصیل' if grade == '20' else grade
                 if um.data == 'name':
                     self.robot.edit_message_text(chat_id=chat_id,
                                                  message_id=message_id,
