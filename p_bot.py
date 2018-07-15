@@ -83,12 +83,9 @@ class SSP:
     def welcome(self, _, update):
         try:
             self.robot.send_message(chat_id=update.message.chat_id,
-                                    text='''
-                                    🎖داوطلبِ گرامی سلاااام☺️ ، به رباتِ " ثبتِ نام " طرحِ تابستانه VOB خوش آمدید⚔️
-ابتدا گزینه👈  reg/  را بزنید!                                    
-                                    ''',
-                                    reply_to_message_id=update.message.message_id,
-                                    parse_mode=telegram.ParseMode.MARKDOWN)
+                                    text='''🎖داوطلبِ گرامی سلاااام☺️ ، به رباتِ " ثبتِ نام " طرحِ تابستانه VOB خوش آمدید⚔️
+ابتدا گزینه👈  /reg را بزنید!''',
+                                    reply_to_message_id=update.message.message_id)
         except Exception as E:
             logging.error('welcome {}'.format(E))
 
@@ -523,9 +520,7 @@ class SSP:
                 db_connect.execute("UPDATE Student SET grade=? WHERE user_id = ?", (grade, user_id))
                 db_connect.commit()
                 self.robot.edit_message_text(chat_id=chat_id,
-                                             text="""
-                                حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️
-                                        """,
+                                             text="""حالا "شماره موبایلِ 📱خودت (یا والدین ) "رو جهتِ تماسِ مشاورین و کارشناسانِ ما ✍️بنویس⚔️""",
                                              message_id=message_id)
                 return self.get_number_and_finish
         except Exception as E:
