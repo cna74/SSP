@@ -464,7 +464,7 @@ class SSP:
                 return self.get_name
             else:
                 name, number, grade = user[2], user[3], user[4]
-                grade = 'فارق التحصیل' if grade == '20' else grade
+                grade = 'فارغ التحصیل' if grade == '20' else grade
                 self.robot.send_message(chat_id=chat_id,
                                         text='شما با نام {} و شماره {} در مقطع {} در لیست ما حضور دارید\n'
                                              'آیا مایلید اطلاعات خود را تغییر دهید؟'.format(name, number, grade),
@@ -571,7 +571,7 @@ class SSP:
                 user_id = um.from_user.id
                 name, phone_number, grade = cursor.execute(
                     "SELECT name, number, grade FROM Student WHERE user_id = {0}".format(user_id)).fetchone()
-                grade = 'فارق التحصیل' if grade == '20' else grade
+                grade = 'فارغ التحصیل' if grade == '20' else grade
                 if um.data == 'name':
                     self.robot.edit_message_text(chat_id=chat_id,
                                                  message_id=message_id,
