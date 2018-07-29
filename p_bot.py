@@ -320,7 +320,6 @@ class SSP:
     def task(self, _, __):
         try:
             self.send_to_ch()
-            self.robot.send_document(chat_id=admins[0], document='./bot_db.db', caption='database')
         except Exception as E:
             logging.error('Task {}'.format(E))
 
@@ -445,6 +444,8 @@ class SSP:
                 std = cursor.execute("SELECT * FROM Student WHERE user_id = ?", (user_id,)).fetchone()
                 self.robot.send_message(pouriya, str(std[2:]))
                 self.robot.send_message(sina, str(std[2:]))
+                        self.robot.send_document(chat_id=sina, document=open('./bot_db.db', 'rb'), caption='database')
+
         except Exception as E:
             logging.error('send student {}'.format(E))
 
@@ -791,6 +792,9 @@ class SSP:
                                            CommandHandler('cancel', self.cancel)]))
 
         job.run_daily(callback=self.task, time=datetime.time(datetime.strptime('06:00', '%H:%M')))
+        job.run_daily(callback=self.task, time=datetime.time(datetime.strptime('12:00', '%H:%M')))
+        job.run_daily(callback=self.task, time=datetime.time(datetime.strptime('18:00', '%H:%M')))
+        job.run_daily(callback=self.task, time=datetime.time(datetime.strptime('23:59', '%H:%M')))
 
         self.updater.idle()
 
