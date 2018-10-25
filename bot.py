@@ -1,8 +1,9 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, ConversationHandler, CallbackQueryHandler
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
-from khayyam import JalaliDate, JalaliDatetime
-from datetime import datetime, timedelta
+from khayyam3.tehran_timezone import JalaliDatetime, timedelta
+from khayyam3 import JalaliDate
+from datetime import datetime
 from PIL import Image
 import numpy as np
 import matplotlib
@@ -23,10 +24,18 @@ sina, lili = 103086461, 303962908
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
+# noinspection PyBroadException
 class SSP:
     def __init__(self, token):
         self.robot = telegram.Bot(token)
         self.updater = Updater(token)
+        try:
+            for i in ['vid', 'plot', 'logo', 'image']:
+                dir_ = os.path.join(os.getcwd(), i)
+                if not os.path.exists(dir_):
+                    os.makedirs(dir_)
+        except Exception as _:
+            pass
 
     @staticmethod
     def current_time():
@@ -50,36 +59,61 @@ class SSP:
 
     def time_is_in(self, now, channel: database.Channel):
         interval: str = channel.interval
-        if interval.endswith('m'):
-            interval: int = int(interval[:-1])
-            interval = tuple(range(interval, 61, interval))
+        if interval.endswith('r'):
+            if interval[-2] == 'm':
+                interval: int = int(interval[:-2])
+                minute = tuple(range(interval, 61, interval))
+                if now.minute in minute and not self.sleep(bed=channel.bed, wake=channel.wake):
+                    return True
 
-            if now.minute in interval and not self.sleep(bed=channel.bed, wake=channel.wake):
-                return True
+            elif interval[-2] == 'h':
+                interval: int = int(interval[:-2])
+                hour = tuple(range(interval, 24, interval))
+                if now.hour in hour and now.minute == 0 and not self.sleep(bed=channel.bed, wake=channel.wake):
+                    return True
 
-        elif interval.endswith('h'):
-            interval: int = int(interval[:-1])
-            interval = [datetime.strptime(str(i), '%H00') for i in range(channel.wake, interval, channel.bed)]
-            if now.strftime('%H%M') in interval and not self.sleep(bed=channel.bed, wake=channel.wake):
-                return True
-        else:
-            interval: list = interval.split(';')
-            if now.strftime('%H%M') in interval and not self.sleep(bed=channel.bed, wake=channel.wake):
-                return True
+        elif interval.endswith('f'):
+            if interval[-2] == 'm':
+                minute = int(interval[:-2])
+
+                if now.minute == minute and not self.sleep(bed=channel.bed, wake=channel.wake):
+                    return True
+            elif interval[-2] == 'h':
+                hour = int(interval[:-2])
+                if now.hour == hour and now.minute == 0 and not self.sleep(bed=channel.bed, wake=channel.wake):
+                    return True
         return False
 
-    # region status
     def entry(self, bot, update):
         try:
-            name = None
             um = update.message
             admin = um.from_user.id
             channels = database.find('channel', admin=admin)
             if channels:
-                if len(channels) == 1 and not name:
-                    return self.setting
+                if len(channels) == 1:
+                    channel = channels[0]
+                    chat_id = um.chat_id
+                    message_id = um.message_id
+                    expire = JalaliDatetime().from_datetime(channel.expire).strftime("%x")
+
+                    bot.send_message(chat_id=chat_id,
+                                     text=(f'میزان وقفه ⏳= {channel.interval}\n'
+                                           f'ساعت توقف 🕰= {channel.bed}\n'
+                                           f'ساعت شروع 🕰= {channel.wake}\n\n'
+                                           f'اعتبار شما تا {expire}'),
+                                     reply_to_message_id=message_id,
+                                     reply_markup=InlineKeyboardMarkup(
+                                         [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
+                                           Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
+                                           Inline('ساعت شروع', callback_data=f'wake;{channel.name}')],
+                                          [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
+                                           Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
+                                          ]
+                                     ))
+                    return self.select
 
                 elif len(channels) > 1:
+                    print(channels)
                     lst = [[Inline(i.name, callback_data=f"_;{i.name}")] for i in channels]
                     bot.send_message(chat_id=admin,
                                      text="شما صاحب چندین کانال هستید\nمایل به مشاهده تنظیمات کدام یک هستید؟",
@@ -87,29 +121,33 @@ class SSP:
                     return self.setting
 
         except Exception as E:
-            logging.error("setting {}".format(E))
+            logging.error("entry {}".format(E))
 
     def setting(self, bot, update):
         try:
             if update.callback_query:
                 data: str = update.callback_query.data
-                _, name = data.split(';')
-                channel = database.find('channel', name=name)
+                admin, name = data.split(';')
+                if not admin == '_':
+                    channel = database.find("channel", admin=admin, name=name)
+                else:
+                    channel = database.find('channel', name=name)
                 chat_id = update.callback_query.message.chat_id
                 message_id = update.callback_query.message.message_id
+                expire = JalaliDatetime().from_datetime(channel.expire).strftime("%x")
 
                 bot.edit_message_text(chat_id=chat_id,
                                       text=(f'میزان وقفه ⏳= {channel.interval}\n'
                                             f'ساعت توقف 🕰= {channel.bed}\n'
                                             f'ساعت شروع 🕰= {channel.wake}\n\n'
-                                            f'اعتبار شما = {channel.expire}'),
+                                            f'اعتبار شما تا {expire}'),
                                       message_id=message_id,
                                       reply_markup=InlineKeyboardMarkup(
                                           [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
                                             Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
                                             Inline('ساعت شروع', callback_data=f'wake;{channel.name}')],
                                            [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
-                                            Inline('')]
+                                            Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
                                            ]
                                       ))
                 return self.select
@@ -123,10 +161,12 @@ class SSP:
                                        f'ساعت توقف 🕰= {channel.bed}\n'
                                        f'ساعت شروع 🕰= {channel.wake}\n'),
                                  reply_markup=InlineKeyboardMarkup(
-                                     [[Inline('وقفه', callback_data='interval;{}'.format(channel.name)),
-                                       Inline('ساعت توقف', callback_data='bed;{}'.format(channel.name)),
-                                       Inline('ساعت شروع', callback_data='wake;{}'.format(channel.name))],
-                                      ]
+                                     [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
+                                       Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
+                                       Inline('ساعت شروع', callback_data=f'wake;{channel.name}'),
+                                       [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
+                                        Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
+                                       ]]
                                  ))
                 return self.select
         except Exception as E:
@@ -142,18 +182,20 @@ class SSP:
                 for i in range(5, 60, 5):
                     lst.append(
                         [Inline("{}M".format(str(i).zfill(2)), callback_data=f"{str(i).zfill(2)}m;{data[1]}")])
-                for i in range(0, 24):
+                for i in range(0, 25):
                     lst.append(
                         [Inline("{}H".format(str(i).zfill(2)), callback_data=f'{str(i).zfill(2)}h;{data[1]}')])
                 lst = np.array(lst).reshape((-1, 6)).tolist()
                 lst.append([Inline('بازگشت به منوی تنظیمات', callback_data=f'setting;{data[1]}')])
                 self.robot.edit_message_text(chat_id=um.message.chat_id,
                                              message_id=um.message.message_id,
-                                             text="گام اول:\nزمانبدی مورد نظر خود را انتخاب کنید\n تنها درصورتی که مایل "
+                                             text="گام اول:\n"
+                                                  "زمانبدی مورد نظر خود را انتخاب کنید\n تنها درصورتی که مایل "
                                                   "به تغییر دقایق به صورت دلخواه هستید "
                                                   "برای مثال:\n"
                                                   "13m -> برابر با هر 13 دقیقه\n"
-                                                  "از دستور /delay"
+                                                  "از این روش استفاده کنید:\n"
+                                                  "/delay 13m @name-e-channel"
                                                   "\n اگر دچار مشکلی شده اید از ما کمک بگیرید\n"
                                                   "@s_for_cna",
                                              reply_markup=InlineKeyboardMarkup(lst))
@@ -180,6 +222,25 @@ class SSP:
                                              text="بات در چه ساعتی خاموش شود؟",
                                              reply_markup=InlineKeyboardMarkup(lst))
                 return self.done
+            elif data[0] == 'graph':
+                self.robot.edit_message_text(chat_id=um.message.chat_id,
+                                             message_id=um.message.message_id,
+                                             text="نمودار در چه بازه زمانی باشد؟",
+                                             reply_markup=InlineKeyboardMarkup(
+                                                 [[Inline('یک هفته', callback_data=f"1w;{data[1]}"),
+                                                   Inline('یک ماه', callback_data=f"1m;{data[1]}"),
+                                                   Inline('یک سال', callback_data=f"1y;{data[1]}")]]
+                                             ))
+                return self.graph
+            elif data[0] == 'logo':
+                self.robot.edit_message_text(chat_id=um.message.chat_id,
+                                             message_id=um.message.message_id,
+                                             text="یک عکس با فرمت png بدون پس زمینه برام بفرست در ابعاد مربع\n"
+                                                  "اگر نمیتونی یا بلد نیستی اینکار رو بکنی"
+                                                  " میتونم از اسم کانال به عنوان لوگو استفاده کنم",
+                                             reply_markup=InlineKeyboardMarkup(
+                                                 [[Inline('استفاده از نام کانال', callback_data=f"logo;{data[1]}")]]))
+                return self.set_logo
         except Exception as E:
             logging.error("select {}".format(E))
 
@@ -256,295 +317,252 @@ class SSP:
 
     def done(self, _, update):
         try:
-            um = update.callback_query
-            data: str = um.data
-            part1, channel_name = data.split(';')
-            chat_id = um.message.chat_id
-            message_id = um.message.message_id
+            if update.callback_query:
+                um = update.callback_query
+                data: str = um.data
+                part1, channel_name = data.split(';')
+                chat_id = um.message.chat_id
+                message_id = um.message.message_id
 
-            channel: database.Channel = database.find('channel', name=channel_name)
-            if part1 == '_':
-                pass
-            elif part1.endswith('b'):
-                bed = part1
-                channel.bed = bed
-                database.update(channel)
-            elif part1.endswith('w'):
-                wake = part1
-                channel.wake = wake
-                database.update(channel)
-            else:
-                interval = part1
-                channel.interval = interval
-                database.update(channel)
+                channel: database.Channel = database.find('channel', name=channel_name)
 
-            self.robot.edit_message_text(chat_id=chat_id,
-                                         message_id=message_id,
-                                         text=f'تغییرات اعمال شد\n'
-                                              f'میزان وقفه ⏳= {channel.interval}\n'
-                                              f'ساعت توقف 🕰= {channel.bed[:-1]}:00\n'
-                                              f'ساعت شروع 🕰= {channel.wake[:-1]}:00\n',
-                                         reply_markup=InlineKeyboardMarkup(
-                                             [[Inline('وقفه', callback_data='interval;{}'.format(channel.name)),
-                                               Inline('ساعت توقف', callback_data='bed;{}'.format(channel.name)),
-                                               Inline('ساعت شروع', callback_data='wake;{}'.format(channel.name))],
-                                              ]
-                                         ))
-            return self.select
+                if part1 == '_':
+                    pass
+                elif part1.endswith('b'):
+                    bed = part1[:-1]
+                    channel.bed = bed
+                    database.update(channel)
+                elif part1.endswith('w'):
+                    wake = part1[:-1]
+                    channel.wake = wake
+                    database.update(channel)
+                else:
+                    interval = part1
+                    channel.interval = interval
+                    database.update(channel)
+
+                self.robot.edit_message_text(chat_id=chat_id,
+                                             message_id=message_id,
+                                             text=f'تغییرات اعمال شد\n'
+                                                  f'میزان وقفه ⏳= {channel.interval}\n'
+                                                  f'ساعت توقف 🕰= {channel.bed[:-1]}:00\n'
+                                                  f'ساعت شروع 🕰= {channel.wake[:-1]}:00\n',
+                                             reply_markup=InlineKeyboardMarkup(
+                                                 [[Inline('وقفه', callback_data='interval;{}'.format(channel.name)),
+                                                   Inline('ساعت توقف', callback_data='bed;{}'.format(channel.name)),
+                                                   Inline('ساعت شروع', callback_data='wake;{}'.format(channel.name))],
+                                                  [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
+                                                   Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")]]))
+                return self.select
+
         except Exception as E:
             logging.error("done {}".format(E))
 
-    # endregion
+    def graph(self, _, update):
+        try:
+            if update.callback_query:
+                um = update.callback_query
+                admin = um.message.chat_id
+                data = um.data
+                domain, ch_name = data.split(';')
+                save_in = f"plot/{ch_name}.png"
 
-    @staticmethod
-    def set_interval(bot, update, args):
+                d = {'1w': 7, '1m': 31, '1y': 365}
+                domain = d.get(domain)
+                now = JalaliDatetime().now().to_date()
+                from_ = now - timedelta(days=domain)
+
+                out = database.find('member', admin=admin, name=ch_name, from_=from_, til=now)
+
+                y = out[:, 0]
+                y = np.append(y, self.robot.get_chat_members_count(ch_name))
+                x = np.arange(len(y))
+
+                plt.plot(x, y, marker='o', label='now', color='red', markersize=4)
+                plt.plot(list(x)[:-1], y[:-1], marker='o', label='members', color='blue', markersize=4)
+
+                plt.ticklabel_format(style='plain', axis='x', useOffset=False)
+                plt.ticklabel_format(style='plain', axis='y', useOffset=False)
+                plt.grid()
+                plt.xlim(x.min(), x.max())
+                plt.ylim(y.min(), y.max())
+                plt.xlabel('days')
+                plt.ylabel('members')
+                plt.legend(loc=4)
+
+                plt.savefig(save_in)
+                plt.close()
+
+                now = JalaliDate().from_date(now)
+                from_ = JalaliDate().from_date(from_)
+                diff = np.mean(np.diff(y), dtype=int)
+                self.robot.send_photo(chat_id=um.message.chat_id,
+                                      photo=open(save_in, 'rb'),
+                                      caption=f"از {now} تا {from_} در {domain} روز\n"
+                                              f" کمترین میزان تعداد اعضا 🔻 {y.min()} و بیشترین 🔺 {y.max()}\n"
+                                              f" میانگین سرعت عضو شدن اعضا در روز {diff}\n"
+                                              f"پیش بینی برای {domain} روز آینده برابر {domain*diff}")
+                os.remove(save_in)
+                return ConversationHandler.END
+        except Exception as E:
+            print(E)
+
+    def set_logo(self, _, update):
+        try:
+            um = update.message
+            chat_id = um.chat_id
+            if um.document:
+                file_id = um.document.file_id
+                mime = um.document.mime_type
+                size = um.document.file_size
+                name = um.caption
+                if mime == 'image/png' and size < 80000:
+                    channel = database.find("channel", admin=chat_id, name=name)
+                    self.robot.get_file(file_id=file_id).download(f'logo/{name}.png')
+                    channel.logo = True
+                    database.update(channel)
+                    lst = []
+                    for i in range(1, 10):
+                        lst.append([Inline(str(i), callback_data=f"{i};{name}")])
+                    lst = np.array(lst).reshape((3, 3)).tolist()
+                    lst.append([Inline('هیچکدام', callback_data=f'0;{name}')])
+
+                    self.robot.send_photo(chat_id=chat_id,
+                                          reply_to_message_id=um.message_id,
+                                          photo=open('info.png', 'rb'),
+                                          caption='خب لوگو تایید شد. محل پیش فرض قرارگیری لوگو رو حالا انتخاب کن\n'
+                                                  'اگر میخوای بصورت پیش فرض لوگو روی عکس ها و گیف ها گذاشته نشه '
+                                                  '"هیچکدام" رو انتخاب کن\n'
+                                                  'پشتیبانی\n'
+                                                  '@s_for_cna',
+                                          reply_markup=InlineKeyboardMarkup(lst))
+
+                    return self.set_pos
+        except Exception as E:
+            logging.error("set_logo {}".format(E))
+
+    def set_pos(self, _, update):
+        try:
+            um = update.callback_query
+            admin = um.message.chat_id
+            data = um.data
+            pos, name = data.split(';')
+            channel = database.find("channel", admin=admin, name=name)
+            channel.pos = int(pos)
+            database.update(channel)
+            self.robot.send_message(chat_id=admin,
+                                    reply_to_message_id=um.message.message_id,
+                                    text="تغییرات اعمال شد",
+                                    reply_markup=InlineKeyboardMarkup(
+                                        [[Inline('وضعیت', callback_data=f'{admin};{name}')]]
+                                    ))
+            return self.setting
+        except Exception as E:
+            logging.error("set_pos {}".format(E))
+
+    def set_interval(self, _, update, args):
+        try:
+            um = update.message
+            admin = um.from_user
+            if args:
+                if len(args) == 2:
+                    interval = args[0]
+                    ch_name = args[1]
+                    channel = database.find('channel', name=ch_name, admin=admin.id)
+                    if channel:
+                        if interval.endswith('m') and interval[:-1].isdigit():
+                            interval = int(interval[:-1])
+                            if 1 < interval <= 30:
+                                self.robot.send_message(chat_id=um.chat_id,
+                                                        reply_to_message_id=um.message_id,
+                                                        text="گام دوم:\n"
+                                                             "1️⃣ پیام ها هر {0} دقیقه ارسال شوند. برای مثال بصورت 01:{0}, "
+                                                             "01:{1} و ...\n"
+                                                             "2️⃣ پیام ها وقتی دقیقه شمار برابر {0} است ارسال شوند برای مثال "
+                                                             "01:{0}, 02:{0}, 03:{0} و ...\n"
+                                                             "کدام یک مورد پسند شماست؟\n"
+                                                             "از ما کمک بگیرید:\n"
+                                                             "@s_for_cna".format(
+                                                            str(interval).zfill(2), str(interval * 2).zfill(2)),
+                                                        reply_markup=InlineKeyboardMarkup(
+                                                            [[Inline('حالت  1️⃣',
+                                                                     callback_data=f'{interval}mr;{ch_name}'),
+                                                              Inline('حالت  2️⃣',
+                                                                     callback_data=f'{interval}mf;{ch_name}')],
+                                                             [Inline('لغو، بازگشت',
+                                                                     callback_data=f'_;{ch_name}')]])
+                                                        )
+                            else:
+                                self.robot.send_message(chat_id=um.chat_id,
+                                                        reply_to_message_id=um.message_id,
+                                                        text="گام دوم:\n"
+                                                             "پیام ها در ساعاتی مانند 01:{0}, 02:{0} ارسال میشوند\n"
+                                                             "از ما کمک بگیرید:\n"
+                                                             "@s_for_cna".format(str(interval).zfill(2)),
+                                                        reply_markup=InlineKeyboardMarkup(
+                                                            [[Inline('تایید',
+                                                                     callback_data=f'{interval}mr;{ch_name}')],
+                                                             [Inline('لغو، بازگشت',
+                                                                     callback_data=f'_;{ch_name}')]])
+                                                        )
+
+                            return self.done
+
+        except Exception as E:
+            logging.error("set_interval: {}".format(E))
+
+    def state(self, bot, update, args):
         try:
             admin = update.message.from_user
-            channel = database.find('channel', admin=admin)
-            if channel:
-                if len(channel) == 1:
-                    if args and str(args[0][:-1]).isdecimal():
-                        if 1 <= int(str(args[0])[:-1]) < 60:
-                            channel.interval = str(args[0])
-                            database.update(channel)
-                            bot.send_message(chat_id=update.message.chat_id,
-                                             text='delay = <b>{}</b> minute'.format(args[0]),
-                                             parse_mode='HTML')
-        except Exception as _:
-            bot.send_message(chat_id=update.message.chat_id, text='اشتباه: یک عدد صحیح بین ۱ تا ۵۹ بفرستید')
-
-    @staticmethod
-    def set_bed(bot, update, args):
-        try:
-            admin = update.message.from_user
-            channel: database.Channel = database.find('channel', admin=admin)
-            if channel:
-                if args:
-                    bed = int(str(args[0]))
-                    if 0 <= bed < 24:
-                        channel.bed = bed
-                        database.update(channel)
-                        bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                         text='<b>bed</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
-        except Exception as _:
-            bot.send_message(chat_id=update.message.chat_id, text='ERROR')
-
-    @staticmethod
-    def set_wake(bot, update, args):
-        try:
-            admin = update.message.from_user
-            channel: database.Channel = database.find('channel', admin=admin)
-            if channel:
-                if args:
-                    wake = int(str(args[0]))
-                    if 0 <= wake < 24:
-                        channel.wake = wake
-                        database.update(channel)
-                        bot.send_message(chat_id=update.message.chat_id, parse_mode='HTML',
-                                         text='<b>wake</b> time starts from <b>{}</b>'.format(str(args[0]) + ':00'))
-        except Exception as _:
-            bot.send_message(chat_id=update.message.chat_id, text='ERROR')
-
-    @staticmethod
-    def state(bot, update):
-        try:
-            admin = update.message.from_user
-            channel: database.Channel = database.find('channel', admin=admin)
+            if args:
+                name = args[0]
+                channel: database.Channel = database.find('channel', admin=admin, name=name)
+            else:
+                channel: database.Channel = database.find('channel', admin=admin)
             if channel:
                 bot.send_message(chat_id=update.message.chat_id,
-                                 text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}'.format(
-                                     channel.interval, channel.bed, channel.wake),
+                                 text='<b>delay =</b> {}\n<b>bed =</b> {}\n<b>wake = </b>{}\nremaining: {}'.format(
+                                     channel.interval, channel.bed, channel.wake, self.remain(admin, channel.name)),
                                  parse_mode='HTML')
             logging.info("/state by {}".format(update.message.from_user))
         except Exception as E:
             logging.error("/state {} by {}".format(E, update.message.from_user))
 
-    def remain(self, user, channel):
+    def remain(self, admin, channel):
         try:
             remaining = database.remain(channel.name)
-            # channel = database.find('channel', name=channel_name)
-            step = self.current_time()[0]
+            step = JalaliDatetime().now()
             rem = remaining
 
             while remaining > 0:
-                # todo not gonna work, fix it
                 if self.sleep(step, bed=channel.bed, wake=channel.wake):
                     step += timedelta(hours=channel.wake / 10000 - step.hour)
                 if step.minute in channel.interval and not step.minute == 0:
                     remaining -= 1
                 step += timedelta(minutes=1)
 
-            logging.info("remain by {}".format(user.first_name))
+            logging.info("remain by {}".format(admin))
             if rem > 0:
-                return rem, step.strftime('%y-%m-%d -> %H:%M')
-            else:
-                return 0, 0
-
-            if not remaining == 0:
+                rem, date = rem, step.strftime('%y-%m-%d -> %H:%M')
                 text = 'پیام های باقیمانده {} کانال تا {} تامین خواهد بود'.format(remaining, date)
             else:
                 text = 'هیچ پیامی در صف نیست'
+
+            return text
         except Exception as E:
-            logging.error("Could't get remaining time by {} Error: {}".format(user.first_name, E))
+            logging.error("Could't get remaining time by {} Error: {}".format(admin, E))
 
-    def cancel(self, _, update):
+    @staticmethod
+    def cancel(_, __):
         return ConversationHandler.END
-
-    # @staticmethod
-    # def _before(year=None, months=None, plot='plot') -> list:
-    #     out = None
-    #     if year and months:
-    #         before = JalaliDate().strptime(year + months, '%Y%m') - timedelta(days=1)
-    #         if plot == 'plot':
-    #             out = [db_connect.execute("SELECT * FROM Mem_count WHERE ddd = '{}'".format(str(before))).fetchone()]
-    #             out.extend([i for i in db_connect.execute(
-    #                 "SELECT * FROM Mem_count WHERE ddd LIKE '{}-{}%'".format(year, months)).fetchall()])
-    #         elif plot == 'pie':
-    #             out = [i[0] for i in db_connect.execute(
-    #                 "SELECT from_ad FROM Queue WHERE ch_a=1 AND out_date LIKE '{}-{}%'".format(
-    #                     year, months)).fetchall()]
-    #     return out
-
-    # def report_members(self, bot, update, args):
-    #     try:
-    #         param = days = out = months = year = title = plus = predict = None
-    #         if args:
-    #             param = str(args[0]).lower()
-    #             year_month = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
-    #             if re.fullmatch(r'd\d*', param):
-    #                 days = param[1:]
-    #                 out = [i for i in
-    #                        db_connect.execute("SELECT * FROM Mem_count ORDER BY ID DESC LIMIT {}".format(days))]
-    #                 out = [j for j in reversed(out)]
-    #                 title = '{} days'.format(days)
-    #                 plus = True
-    #             elif re.fullmatch(r'm\d{,2}', param):
-    #                 months = param[1:].zfill(2)
-    #                 year = self.current_time()[0][:4]
-    #                 out = self._before(year, months)
-    #                 title = 'graph of {}-{}'.format(year, months)
-    #                 if year + months == str(self.current_time()[0].replace('-', '')[:6]):
-    #                     plus = predict = True
-    #             elif re.fullmatch(r'y\d{,2}', param):
-    #                 year = '13' + param[1:] if len(param) == 3 else param[1:]
-    #                 out = [i for i in db_connect.execute("SELECT * FROM Mem_count WHERE ddd LIKE '{}%'".format(year))]
-    #                 title = 'graph of {}'.format(year)
-    #                 if year == self.current_time()[0][:4]:
-    #                     plus = True
-    #             elif re.fullmatch(year_month, param):
-    #                 date = re.fullmatch(year_month, param)
-    #                 year = '13' + date.group('year') if len(date.group('year')) == 2 else date.group('year')
-    #                 months = date.group('month')
-    #                 out = self._before(year, months)
-    #                 title = 'graph of 20{}-{}'.format(year, months)
-    #                 if year + months == ''.join(self.current_time()[0].split('-'))[:6]:
-    #                     plus = True
-    #         else:
-    #             out = db_connect.execute("SELECT * FROM Mem_count").fetchall()
-    #             title = "starts from {}".format(out[0][1])
-    #             plus = True
-    #         if out:
-    #             members = [i for i in [j[3] for j in out]]
-    #             balance = [i for i in [j[2] for j in out]]
-    #             average = sum(balance) / len(balance)
-    #             caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-    #                 title, members[-1] - members[0], average, members[0], members[-1])
-    #             if plus:
-    #                 now = self.robot.get_chat_members_count(self.channel_name)
-    #                 balance.append(now - members[-1])
-    #                 members.append(now)
-    #                 average = sum(balance) / len(balance)
-    #                 caption = '{}\nbalance = {}\naverage = {:.2f}\nfrom {} till {}'.format(
-    #                     title, members[-1] - members[0], average, members[0], members[-1])
-    #                 days_of_this_month = JalaliDatetime.now().daysinmonth
-    #                 if predict and not (average * (days_of_this_month - len(members))) <= 0:
-    #                     pdt = int(members[-1] + (average * (days_of_this_month - len(members))))
-    #                     caption += '\npredict of month = {}'.format(pdt)
-    #                 plt.plot(range(1, len(members) + 1), members, marker='o', label='now', color='red', markersize=4)
-    #                 plt.plot(range(1, len(members)), members[:-1], marker='o', label='members', color='blue',
-    #                          markersize=4)
-    #             else:
-    #                 plt.plot(range(1, len(members) + 1), members, marker='o', label='members', color='blue',
-    #                          markersize=4)
-    #             plt.grid()
-    #             plt.xlim(1, )
-    #             plt.xlabel('days')
-    #             plt.ylabel('members')
-    #             plt.title(title)
-    #             plt.legend(loc=4)
-    #             plt.savefig('plot/plot.png')
-    #             bot.send_photo(chat_id=update.message.chat_id, photo=open('plot/plot.png', 'rb'), caption=caption)
-    #             plt.close()
-    #         logging.info('plot:: args {} -- by: {}'.format(args, update.message.from_user))
-    #     except TimeoutError:
-    #         pass
-    #     except Exception as E:
-    #         self.robot.send_message(chat_id=update.message.chat_id,
-    #                                 text='**ERROR {}**'.format(update.message.text),
-    #                                 parse_mode='Markdown')
-    #         logging.error("Could't get plot:: args {} -- {} - by: {}".format(args, E, update.message.from_user))
-    #
-    # def report_admins(self, bot, update, args):
-    #     try:
-    #         param = out = title = None
-    #         if args:
-    #             pattern = re.compile(r"(?P<year>\d{,4})-(?P<month>\d{,2})")
-    #             param = str(args[0]).lower()
-    #             if re.fullmatch(r'm\d{,2}', param):
-    #                 months = param[1:].zfill(2)
-    #                 year = self.current_time()[0][:4]
-    #                 out = self._before(year, months, plot='pie')
-    #                 title = 'graph of {}-{}'.format(year, months)
-    #             elif re.fullmatch(pattern, param):
-    #                 date = re.fullmatch(pattern, param)
-    #                 year = '13' + date.group('year') if len(date.group('year')) == 2 else date.group('year')
-    #                 months = date.group('month').zfill(2)
-    #                 out = self._before(year, months, plot='pie')
-    #                 title = 'graph of {}-{}'.format(year, months)
-    #         else:
-    #             out = [i[0] for i in db_connect.execute("SELECT from_ad FROM Queue WHERE ch_a=1").fetchall()]
-    #             title = 'graph of all time'
-    #         tmp = set(out.copy())
-    #         admins = {}
-    #         for i in tmp:
-    #             admins[str(i)] = out.count(i)
-    #         for k in admins.keys():
-    #             try:
-    #                 j = self.robot.get_chat(k).to_dict()
-    #                 if j.get('first_name') and j.get('last_name'):
-    #                     count = admins[k]
-    #                     del admins[k]
-    #                     admins[(' '.join([j['first_name']] + [j['last_name']]))] = count
-    #                 elif j.get('first_name'):
-    #                     count = admins[k]
-    #                     del admins[k]
-    #                     admins[j['first_name']] = count
-    #             except Exception as E:
-    #                 pass
-    #         ex = [[x, y] for x, y in admins.items()]
-    #         data = [x[1] for x in ex]
-    #         labels = ["{}\n{}".format(x[0], x[1]) for x in ex]
-    #         explode = [0.1 for _ in labels]
-    #         plt.figure(figsize=(12.80, 7.20))
-    #         plt.title(title)
-    #         plt.axes(aspect=1)
-    #         plt.pie(x=data, labels=labels, explode=explode, startangle=90,
-    #                 autopct='%1.1f%%', radius=1.25, labeldistance=1.14, pctdistance=.9)
-    #         plt.savefig('plot/pie.jpg')
-    #         bot.send_photo(photo=open('plot/pie.jpg', 'rb'), chat_id=update.message.chat_id)
-    #         plt.close()
-    #         os.remove('./plot/pie.jpg')
-    #     except Exception as E:
-    #         logging.error('report admins {}'.format(E))
-    #
 
     def add_member(self):
         try:
             channels = [channel.channel_id for channel in database.find('channel')]
-            current_date = self.current_time()[0]
-            for channel_id in channels:
-                num = self.robot.get_chat_members_count(channel_id)
-                member = database.Member(number=num, channel_id=channel_id, calendar=current_date)
+            current_date = JalaliDatetime().now()
+            for channel_name in channels:
+                num = self.robot.get_chat_members_count(channel_name)
+                member = database.Member(number=num, channel_name=channel_name, calendar=current_date)
                 database.add(member)
             self.robot.send_document(document=open('bot_db.db', 'rb'),
                                      caption=current_date.strftime("%x"),
@@ -745,20 +763,29 @@ class SSP:
 
                 if message.kind == 'text':
                     message.msg_ch_id = self.robot.send_message(chat_id=message.to_ch, text=txt).message_id
+
                 elif message.kind == 'video':
                     # TODO set logo on videos
                     message.msg_ch_id = self.robot.send_video(chat_id=message.to_ch, video=message.file_id, caption=txt)
+
                 elif message.kind == 'photo':
                     txt = self.image_watermark(photo=message.file_id, caption=message.txt, channel_name=message.to_ch)
                     message.msg_ch_id = self.robot.send_photo(chat_id=message.to_ch, photo=open('image/out.jpg', 'rb'),
                                                               caption=txt).message_id
                     os.remove('./image/out.jpg')
+
+                elif message.kind == 'animation':
+                    form = message.other
+                    txt = self.gif_watermark(gif=message.file_id, format_=form, caption=message.txt,
+                                             channel_name=message.to_ch)
+                    message.msg_ch_id = self.robot.send_animation(chat_id=message.to_ch,
+                                                                  animation=open('vid/out.mp4', 'rb'),
+                                                                  caption=txt).message_id
+                    os.remove('./vid/out.mp4')
+
                 elif message.kind == 'audio':
                     message.msg_ch_id = self.robot.send_audio(chat_id=message.to_ch, audio=message.file_id,
                                                               caption=txt).message_id
-                elif message.kind == 'animation':
-                    message.msg_ch_id = self.robot.send_animation(chat_id=message.to_ch, animation=message.file_id,
-                                                                  caption=txt).message_id
                 elif message.kind == 'document':
                     message.msg_ch_id = self.robot.send_document(chat_id=message.to_ch, document=message.file_id,
                                                                  caption=txt).message_id
@@ -771,14 +798,7 @@ class SSP:
                 elif message.kind == 'sticker':
                     message.msg_ch_id = self.robot.send_sticker(chat_id=message.to_ch, sticker=message.file_id,
                                                                 caption=txt).message_id
-                elif message.kind == 'vid':
-                    form = message.other
-                    txt = self.gif_watermark(gif=message.file_id, format_=form, caption=message.txt,
-                                             channel_name=message.to_ch)
-                    message.msg_ch_id = self.robot.send_document(chat_id=message.to_ch,
-                                                                 document=open('vid/out.mp4', 'rb'),
-                                                                 caption=txt).message_id
-                    os.remove('./vid/out.mp4')
+
                 logging.info('send_to_ch message ID {}'.format(message.id))
                 message.sent = True
                 message.ch_a = True
@@ -794,17 +814,17 @@ class SSP:
 
     def task(self, bot, _):
         try:
-            t1 = self.current_time()[1]
+            now = JalaliDatetime().now()
             channels = database.find('channel')
 
-            if int(t1.strftime('%H%M')) == 0:
+            if now.hour == now.minute == 0:
                 self.add_member()
 
-            if t1.minute == 0:
+            if now.minute == 0:
                 bot.send_message(chat_id=sina, text=str(psutil.virtual_memory()[2]))
 
             for channel in channels:
-                if self.time_is_in(now=t1, channel=channel):
+                if self.time_is_in(now=now, channel=channel):
                     self.send_to_ch(channel=channel)
 
         except Exception as E:
@@ -831,16 +851,9 @@ class SSP:
         dpa = self.updater.dispatcher.add_handler
         job = self.updater.job_queue
         self.updater.start_polling()
-        print('started')
 
         dpa(MessageHandler(Filters.status_update.new_chat_members, self.send_info))
-        # dpa(CommandHandler('remain', self.remain, Filters.private)))
-        # dpa(CommandHandler('member', self.report_members, Filters.private), pass_args=True))
-        # dpa(CommandHandler('admin', self.report_admins, Filters.private), pass_args=True))
         dpa(CommandHandler('state', self.state, Filters.private))
-        dpa(CommandHandler('delay', self.set_interval, Filters.private, pass_args=True))
-        dpa(CommandHandler('bed', self.set_bed, Filters.private, pass_args=True))
-        dpa(CommandHandler('wake', self.set_wake, Filters.private, pass_args=True))
         dpa(ConversationHandler(entry_points=[CommandHandler(command='status',
                                                              callback=self.entry,
                                                              filters=Filters.private)],
@@ -849,24 +862,27 @@ class SSP:
                                     self.select: [CallbackQueryHandler(self.select)],
                                     self.step2: [CallbackQueryHandler(self.step2)],
                                     self.done: [CallbackQueryHandler(self.done)],
-                                    # self.graph: [CallbackQueryHandler(self.graph)]
+                                    self.graph: [CallbackQueryHandler(self.graph)],
+                                    self.set_pos: [CallbackQueryHandler(self.set_pos)],
+                                    self.set_logo: [MessageHandler(filters=Filters.private, callback=self.set_logo)]
                                 },
                                 fallbacks=[CommandHandler(command='cancel',
                                                           callback=self.cancel)]))
 
-        # todo finish this
-        dpa(ConversationHandler(entry_points=[CommandHandler(command='member',
-                                                             callback=self.member,
-                                                             filters=Filters.private)],
-                                states={
-                                    self.member_range: [CallbackQueryHandler(callback=self.member_range)],
-                                },
-                                fallbacks=[CommandHandler(command='cancel',
-                                                          callback=self.cancel)]))
-        # todo add conver.. delay
+        dpa(ConversationHandler(entry_points=[CommandHandler(command='delay',
+                                                             callback=self.set_interval,
+                                                             filters=Filters.private,
+                                                             pass_args=True)],
+                                states={self.done: [CallbackQueryHandler(callback=self.done)]},
+                                fallbacks=[CommandHandler('cancel', self.cancel)]))
 
         dpa(MessageHandler(filters=Filters.group, callback=self.save, edited_updates=True))
-        job.run_repeating(callback=self.task, interval=60, first=0)
+
+        first = 60 - JalaliDatetime().now().second
+        job.run_repeating(callback=self.task, interval=60, first=first)
+
+        print('started')
+
         self.updater.idle()
 
 

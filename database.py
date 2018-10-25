@@ -1,9 +1,10 @@
 from sqlalchemy import create_engine, Column, String, Integer, Date, DateTime, Boolean, Text
-from sqlalchemy.ext.declarative import declarative_base
 from khayyam3.tehran_timezone import JalaliDatetime, timedelta
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
+import matplotlib.pyplot as plt
+import numpy as np
 import logging
-
 
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 Base = declarative_base()
@@ -11,7 +12,7 @@ Base = declarative_base()
 
 class Channel(Base):
     def __init__(self, name, admin, group_id,
-                 interval='11mr', bed='off', wake='off', register=JalaliDatetime().now().to_datetime(), expire=1):
+                 interval='11mr', bed='off', wake='off', logo=False, pos=7, register=JalaliDatetime().now().to_datetime(), expire=1):
         self.name = name
         self.admin = admin
         self.group_id = group_id
@@ -19,8 +20,10 @@ class Channel(Base):
 
         self.bed = bed
         self.wake = wake
+        self.logo = logo
+        self.pos = pos
         self.register = register
-        self.expire = register + timedelta(days=31*expire)
+        self.expire = register + timedelta(days=31 * expire)
 
     __tablename__ = "channel"
 
@@ -32,21 +35,24 @@ class Channel(Base):
     interval = Column("interval", String)
     bed = Column("bed", Integer)
     wake = Column("wake", Integer)
+    logo = Column("logo", Boolean)
+    pos = Column("pos", Integer)
     register = Column("register", DateTime)
     expire = Column("expire", DateTime)
 
 
 class Member(Base):
-    def __init__(self, number, channel_id, calendar):
+    def __init__(self, number, channel_name,
+                 calendar):
         self.number = number
-        self.channel_id = channel_id
+        self.channel_name = channel_name
         self.calendar = calendar
 
     __tablename__ = "member"
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
     number = Column("number", Integer)
-    channel_id = Column("channel_id", Integer)
+    channel_name = Column("channel_id", String)
     calendar = Column("calendar", Date)
 
 
@@ -138,6 +144,16 @@ def find(table, **col):
             channel = session.query(Channel).filter(Channel.name == col['name']).first()
 
         return channel
+    elif table == 'member':
+        if col.get('admin') and col.get('name'):
+            q = session.query(Channel).filter(Channel.name == col['name'],
+                                              Channel.admin == col['admin']).first()
+            if q:
+                member = session.query(Member.number,
+                                       Member.calendar).filter(Member.channel_name == col['name'],
+                                                               Member.calendar.between(col['from_'], col['til'])).all()
+                member = np.array(member).reshape((-1, 2))
+                return member
 
 
 def update(obj):
@@ -158,12 +174,14 @@ def update(obj):
         session.close()
 
     elif obj.__class__ == Channel:
-        row = session.query(Channel).filter(Channel.channel_id == obj.channel_id).first()
+        row: Channel = session.query(Channel).filter(Channel.channel_id == obj.channel_id).first()
 
         row.interval = obj.interval
         row.bed = obj.bed
         row.wake = obj.wake
         row.channel_name = obj.name
+        row.logo = obj.logo
+        row.pos = obj.pos
 
         session.commit()
 
@@ -178,7 +196,7 @@ def remain(channel_name: str) -> int:
     return len(rem)
 
 
-def get_last_msg(channel_name: str):
+def get_last_msg(channel_name: str) -> Message:
     res = session.query(Message).filter(Message.sent == False,
                                         ~Message.txt.startswith('.'),
                                         ~Message.txt.startswith('/'),
@@ -186,6 +204,15 @@ def get_last_msg(channel_name: str):
     return res
 
 
-add(Channel(name='@ttiimmeerrr', admin=103086461, group_id=-1001141277396, expire=1))
+# add(Channel(name='@ttiimmeerrr', admin=103086461, group_id=-1001141277396, expire=1))
+# add(Member(number=2100, channel_name='@ttiimmeerrr', calendar=JalaliDatetime().now().to_date()+timedelta(days=1)))
+# add(Member(number=2050, channel_name='@ttiimmeerrr', calendar=JalaliDatetime().now().to_date()+timedelta(days=2)))
+# add(Member(number=2089, channel_name='@ttiimmeerrr', calendar=JalaliDatetime().now().to_date()+timedelta(days=3)))
+# add(Member(number=2133, channel_name='@ttiimmeerrr', calendar=JalaliDatetime().now().to_date()+timedelta(days=4)))
 # add(Channel(name='@min1ch', admin=103086461, group_id=-1001174976706, interval='1m'))
 # add(Channel(name='@min5ch', admin=103086461, group_id=-1001497526440, interval='5m'))
+
+
+# for i in range(-50, 50):
+#     add(Member(number=np.random.randint(500, 3500), channel_name='@ttiimmeerrr',
+#                calendar=JalaliDatetime().now().to_date()+timedelta(days=i)))
