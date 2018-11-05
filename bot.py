@@ -45,49 +45,6 @@ class SSP:
             return True
         return False
 
-    def admin(self, _, update, args):
-        try:
-            chat_id = update.message.chat_id
-            message_id = update.message.message_id
-            command = group_id = admin = channel_name = plan = expire = None
-            if args:
-                command = args.split()[0]
-                if command == "add":
-                    group_id, admin, channel_name, plan = args.split()[1:]
-                    if not db.find('channel', name=channel_name):
-                        channel = db.Channel(name=channel_name, admin=admin, group_id=group_id, plan=plan)
-                        db.add(channel)
-                        self.robot.send_message(chat_id=chat_id,
-                                                reply_to_message_id=message_id,
-                                                text=f"ثبت شد \n\n"
-                                                     f"{tuple(channel.__dict__)[1:]}",
-                                                )
-                elif command == "ren":
-                    channel_name, expire = args.split()[1:]
-                    if db.find("channel", name=channel_name):
-                        channel: db.Channel = db.find("channel", name=channel_name)
-                        channel.expire + timedelta(days=int(expire))
-                        db.update(channel)
-                        self.robot.send_message(chat_id=chat_id,
-                                                reply_to_message_id=message_id,
-                                                text=f"ثبت شد \n\n"
-                                                     f"{tuple(channel.__dict__)[1:]}",
-                                                )
-            else:
-                self.robot.send_message(chat_id=chat_id,
-                                        text=strings.admin_hint)
-        except Exception as E:
-            logging.error("admin {}".format(E))
-
-    def add_member(self, channel):
-        try:
-            current_date = JalaliDatetime().now().to_date()
-            num = self.robot.get_chat_members_count(channel.name)
-            member = db.Member(number=num, channel_name=channel.name, calendar=current_date)
-            db.add(member)
-        except Exception as E:
-            logging.error('add_members {}'.format(E))
-
     def save(self, _, update):
         try:
             um = update.message
@@ -284,6 +241,15 @@ class SSP:
         except Exception as E:
             logging.error('save {}'.format(E))
 
+    def add_member(self, channel):
+        try:
+            current_date = JalaliDatetime().now().to_date()
+            num = self.robot.get_chat_members_count(channel.name)
+            member = db.Member(number=num, channel_name=channel.name, calendar=current_date)
+            db.add(member)
+        except Exception as E:
+            logging.error('add_members {}'.format(E))
+
     def send_to_ch(self, channel, attempt=1):
         message = db.get_last_msg(channel_name=channel.name)
         try:
@@ -453,6 +419,40 @@ class SSP:
 
         except Exception as E:
             logging.error('Task {}'.format(E))
+
+    def admin(self, _, update, args):
+        try:
+            chat_id = update.message.chat_id
+            message_id = update.message.message_id
+            command = group_id = admin = channel_name = plan = expire = None
+            if args:
+                command = args.split()[0]
+                if command == "add":
+                    group_id, admin, channel_name, plan = args.split()[1:]
+                    if not db.find('channel', name=channel_name):
+                        channel = db.Channel(name=channel_name, admin=admin, group_id=group_id, plan=plan)
+                        db.add(channel)
+                        self.robot.send_message(chat_id=chat_id,
+                                                reply_to_message_id=message_id,
+                                                text=f"ثبت شد \n\n"
+                                                     f"{tuple(channel.__dict__)[1:]}",
+                                                )
+                elif command == "ren":
+                    channel_name, expire = args.split()[1:]
+                    if db.find("channel", name=channel_name):
+                        channel: db.Channel = db.find("channel", name=channel_name)
+                        channel.expire + timedelta(days=int(expire))
+                        db.update(channel)
+                        self.robot.send_message(chat_id=chat_id,
+                                                reply_to_message_id=message_id,
+                                                text=f"ثبت شد \n\n"
+                                                     f"{tuple(channel.__dict__)[1:]}",
+                                                )
+            else:
+                self.robot.send_message(chat_id=chat_id,
+                                        text=strings.admin_hint)
+        except Exception as E:
+            logging.error("admin {}".format(E))
 
     def send_info(self, _, update):
         try:
