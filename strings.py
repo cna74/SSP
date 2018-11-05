@@ -1,3 +1,4 @@
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
 import db
 
@@ -16,13 +17,22 @@ def status(channel, remain):
     expire = JalaliDatetime().from_datetime(channel.expire).strftime("%x")
     logo = "استفاده از نام کانال" if not channel.logo else "✔️"
 
-    ret = (f'میزان وقفه ⏳= {channel.interval}\n'
-           f'ساعت توقف 🕰= {channel.bed}\n'
-           f'ساعت شروع 🕰= {channel.wake}\n'
-           f'لوگو = {logo}\n\n'
-           f'{remain}\n'
-           f'اعتبار شما تا {expire}')
-    return ret
+    keyboard = [[Inline('وقفه ⏲️', callback_data=f'interval;{channel.name}'),
+                 Inline('ساعت توقف 🕰️', callback_data=f'bed;{channel.name}'),
+                 Inline('ساعت شروع 🕰️', callback_data=f'wake;{channel.name}')],
+                [Inline('مشاهده نمودار 📈', callback_data=f"graph;{channel.name}"),
+                 Inline('تنظیم لوگو 🖼️', callback_data=f"logo;{channel.name}")],
+                [Inline('تمدید 📆', callback_data=f'up;{channel.name}')]]
+    keyboard = InlineKeyboardMarkup(keyboard)
+
+    text = (f'میزان وقفه ⏳= {channel.interval}\n'
+            f'ساعت توقف 🕰= {channel.bed}\n'
+            f'ساعت شروع 🕰= {channel.wake}\n'
+            f'لوگو = {logo}\n\n'
+            f'{remain}\n'
+            f'اعتبار شما تا {expire}')
+
+    return text, keyboard
 
 
 start = """سلام 🤓✋🏻

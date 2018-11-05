@@ -1,11 +1,15 @@
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip
+import moviepy.config as mpy_conf
 import multiprocessing
 from PIL import Image
+import warnings
 import logging
 import db
 import re
 import os
 
+warnings.simplefilter("ignore", category=Warning)
+mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/usr/bin/convert'})
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 

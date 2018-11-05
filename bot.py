@@ -1,21 +1,20 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from khayyam3.tehran_timezone import timedelta, JalaliDatetime
-from datetime import datetime
 import numpy as np
+import warnings
 import telegram
 import strings
 import logging
 import psutil
 import editor
-import pytz
-import time
 import conv
-# import var
+import var
 import db
 import os
+warnings.simplefilter("ignore", category=Warning)
 
 sina, lili = 103086461, 303962908
-limit_size = 2
+limit_size = 1
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
@@ -111,7 +110,6 @@ class SSP:
                     elif ue.video:
                         media = ue.video.file_id
                         mime = str(um.video.mime_type).split('/')[1]
-                        print()
                         dir_ = f"./vid/{channel.name}.{mime}"
                         out = f'./vid/{channel.name}_out.mp4'
                         size = ue.video.file_size / (1024 ** 2)
@@ -237,7 +235,7 @@ class SSP:
                         db.Message(from_group=um.chat_id, to_channel=channel.name, msg_gp_id=um.message_id, kind=kind,
                                    txt=text, file_id=file_id, size=size, mime=mime, other=other))
 
-            logging.info("save {}".format(tuple(message.__dict__))[1:])
+            logging.info("save {}".format(tuple(message.__dict__.items()))[1:])
         except Exception as E:
             logging.error('save {}'.format(E))
 
@@ -275,7 +273,7 @@ class SSP:
                 self.robot.send_media_group(chat_id=chat_id, media=media)
                 for msg in new_message:
                     db.update(msg)
-                logging.info('media_group sent {}'.format(tuple(message.__dict__))[1:])
+                logging.info('media_group sent {}'.format(tuple(message.__dict__.items())[1:]))
 
             # edited
             elif message.ch_a:
@@ -289,7 +287,7 @@ class SSP:
                                                                         message_id=message.msg_ch_id)
 
                 db.update(message)
-                logging.info('edit_msg {}'.format(tuple(message.__dict__))[1:])
+                logging.info('edit_msg {}'.format(tuple(message.__dict__.items())[1:]))
 
             # regular
             elif not message.ch_a:
@@ -299,30 +297,6 @@ class SSP:
                 if message.kind == 'text':
                     message.msg_ch_id = self.robot.send_message(chat_id=message.to_channel, text=txt,
                                                                 parse_mode=parse_mode).message_id
-
-                elif message.kind == 'video':
-                    form = message.mime
-                    dir_ = f"./vid/{channel.name}.{form}"
-                    out = f'./vid/{channel.name}_out.mp4'
-
-                    if message.size <= 2 and channel.plan >= 3:
-                        self.robot.getFile(message.file_id).download(dir_, timeout=10)
-                        txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
-                                                   caption=message.txt, channel=channel)
-                        try:
-                            message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
-                                                                      video=open(out, 'rb'),
-                                                                      caption=txt).message_id
-                            os.remove(out)
-                        except Exception as _:
-                            message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
-                                                                      video=message.file_id,
-                                                                      caption=txt).message_id
-                    else:
-                        txt = editor.id_remove(text=message.txt, channel=channel)
-                        message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
-                                                                  video=message.file_id,
-                                                                  caption=txt).message_id
 
                 elif message.kind == 'photo':
                     dir_ = f"./image/{channel.name}.jpg"
@@ -337,6 +311,31 @@ class SSP:
                         message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id,
                                                                   caption=txt).message_id
 
+                elif message.kind == 'video':
+                    form = message.mime
+                    dir_ = f"./vid/{channel.name}.{form}"
+                    out = f'./vid/{channel.name}_out.mp4'
+
+                    if message.size <= limit_size and channel.plan >= 3:
+                        self.robot.getFile(message.file_id).download(dir_, timeout=10)
+                        try:
+                            txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
+                                                       caption=message.txt, channel=channel)
+
+                            message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
+                                                                      video=open(out, 'rb'),
+                                                                      caption=txt,
+                                                                      timeout=30).message_id
+                        except Exception as _:
+                            message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
+                                                                      video=message.file_id,
+                                                                      caption=txt).message_id
+                    else:
+                        txt = editor.id_remove(text=message.txt, channel=channel)
+                        message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
+                                                                  video=message.file_id,
+                                                                  caption=txt).message_id
+
                 elif message.kind == 'animation':
                     form = message.mime
                     dir_ = f"./gif/{channel.name}.{form}"
@@ -344,13 +343,13 @@ class SSP:
 
                     if message.size <= limit_size and channel.plan >= 2:
                         self.robot.getFile(message.file_id).download(dir_, timeout=10)
-                        txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
-                                                   caption=message.txt, channel=channel)
                         try:
+                            txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
+                                                       caption=message.txt, channel=channel)
+
                             message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
                                                                           animation=open(out, 'rb'),
                                                                           caption=txt).message_id
-                            os.remove(out)
                         except Exception as _:
                             message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
                                                                           animation=message.file_id,
@@ -381,7 +380,7 @@ class SSP:
                     message.msg_ch_id = self.robot.send_sticker(chat_id=message.to_channel, sticker=message.file_id,
                                                                 caption=txt).message_id
 
-                logging.info('send_to_ch {}'.format(tuple(message.__dict__))[1:])
+                logging.info('send_to_ch {}'.format(tuple(message.__dict__.items())[1:]))
                 message.sent = True
                 message.ch_a = True
                 db.update(message)
@@ -391,7 +390,7 @@ class SSP:
         except AttributeError:
             pass
         except Exception as E:
-            logging.error('send_to_ch attempt {} Error: {}'.format(tuple(message.__dict__)[1:], E))
+            logging.error('send_to_ch attempt {} Error: {}'.format(tuple(message.__dict__.items())[1:], E))
             if attempt < 2:
                 self.send_to_ch(channel, attempt + 1)
             else:
@@ -489,5 +488,5 @@ class SSP:
         self.updater.idle()
 
 
-timer = SSP('410818874:AAEU8gHdOmurgJBf_N_p-58qVW94Rc_vgOc')
+timer = SSP(var.TOKEN)
 timer.run()

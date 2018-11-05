@@ -27,6 +27,21 @@ def sleep(entry=None, bed=None, wake=None):
     return False
 
 
+def time_is_in(now, channel: db.Channel):
+
+    interval = (int(channel.interval[:-2]),)
+    if channel.interval.endswith("mr"):
+        interval = np.arange(0, 60, interval[0], dtype=np.uint8)
+    elif channel.interval.endswith("hr"):
+        interval = np.arange(0, 24, interval[0], dtype=np.uint8)
+
+    if (channel.interval[-2] == "m" and now.minute in interval) or \
+            (channel.interval[-2] == "h" and now.hour in interval):
+        return True
+
+    return False
+
+
 def remain(admin, channel):
     try:
         remaining = db.remain(channel)
@@ -54,21 +69,6 @@ def remain(admin, channel):
         logging.error("Could't get remaining time by {} Error: {}".format(admin, E))
 
 
-def time_is_in(now, channel: db.Channel):
-
-    interval = (int(channel.interval[:-2]),)
-    if channel.interval.endswith("mr"):
-        interval = np.arange(0, 60, interval[0], dtype=np.uint8)
-    elif channel.interval.endswith("hr"):
-        interval = np.arange(0, 24, interval[0], dtype=np.uint8)
-
-    if (channel.interval[-2] == "m" and now.minute in interval) or \
-            (channel.interval[-2] == "h" and now.hour in interval):
-        return True
-
-    return False
-
-
 # region status
 def status(bot, update):
     try:
@@ -80,17 +80,11 @@ def status(bot, update):
                 channel = channels
                 chat_id = um.chat_id
                 message_id = um.message_id
-                keyboard = [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
-                             Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
-                             Inline('ساعت شروع', callback_data=f'wake;{channel.name}')],
-                            [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
-                             Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
-                            [Inline('تمدید', callback_data=f'up;{channel.name}')]]
-                text = remain(admin=admin, channel=channel)
+                text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
                 bot.send_message(chat_id=chat_id,
-                                 text=strings.status(channel, text),
+                                 text=text,
                                  reply_to_message_id=message_id,
-                                 reply_markup=InlineKeyboardMarkup(keyboard))
+                                 reply_markup=keyboard)
                 return select
 
             elif isinstance(channels, list):
@@ -115,34 +109,15 @@ def setting(bot, update):
                 channel = db.find('channel', name=name)
             chat_id = update.callback_query.message.chat_id
             message_id = update.callback_query.message.message_id
-
-            keyboard = [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
-                         Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
-                         Inline('ساعت شروع', callback_data=f'wake;{channel.name}')],
-                        [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
-                         Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
-                        [Inline('تمدید', callback_data=f'up;{channel.name}')]]
-            text = remain(admin=admin, channel=channel)
-            bot.edit_message_text(chat_id=chat_id,
-                                  text=strings.status(channel, text),
-                                  message_id=message_id,
-                                  reply_markup=InlineKeyboardMarkup(keyboard))
+            text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+            bot.edit_message_text(chat_id=chat_id, text=text, message_id=message_id, reply_markup=keyboard)
             return select
         else:
             um = update.message
             admin = um.from_user
             channel: db.Channel = db.find('channel', admin=admin)
-            text = remain(admin=admin, channel=channel)
-            bot.send_message(chat_id=admin.id,
-                             text=strings.status(channel, text),
-                             reply_markup=InlineKeyboardMarkup(
-                                 [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
-                                   Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
-                                   Inline('ساعت شروع', callback_data=f'wake;{channel.name}'),
-                                   [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
-                                    Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
-                                   ]]
-                             ))
+            text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+            bot.send_message(chat_id=admin.id, text=text, reply_markup=keyboard)
             return select
     except Exception as E:
         logging.error("setting {}".format(E))
@@ -307,17 +282,8 @@ def step2(bot, update):
             return done
         elif interval == "setting":
             channel = db.find("channel", name=ch_name)
-            keyboard = [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
-                         Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
-                         Inline('ساعت شروع', callback_data=f'wake;{channel.name}')],
-                        [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
-                         Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
-                        [Inline('تمدید', callback_data=f'up;{channel.name}')]]
-            text = remain(admin=admin, channel=channel)
-            bot.edit_message_text(chat_id=admin,
-                                  text=strings.status(channel, text),
-                                  message_id=message_id,
-                                  reply_markup=InlineKeyboardMarkup(keyboard))
+            text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+            bot.edit_message_text(chat_id=admin, text=text, message_id=message_id, reply_markup=keyboard)
             return select
 
 
@@ -351,17 +317,8 @@ def done(bot, update):
                 channel.wake = part1
                 db.update(channel)
 
-            keyboard = [[Inline('وقفه', callback_data=f'interval;{channel.name}'),
-                         Inline('ساعت توقف', callback_data=f'bed;{channel.name}'),
-                         Inline('ساعت شروع', callback_data=f'wake;{channel.name}')],
-                        [Inline('مشاهده نمودار', callback_data=f"graph;{channel.name}"),
-                         Inline('تنظیم لوگو', callback_data=f"logo;{channel.name}")],
-                        [Inline('تمدید', callback_data=f'up;{channel.name}')]]
-            text = remain(admin=chat_id, channel=channel)
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text=strings.status(channel, text),
-                                  reply_markup=InlineKeyboardMarkup(keyboard))
+            text, keyboard = strings.status(channel=channel, remain=remain(admin=chat_id, channel=channel))
+            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=keyboard)
             return select
 
     except Exception as E:
