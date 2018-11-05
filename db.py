@@ -100,7 +100,6 @@ class Message(Base):
 engine = create_engine('sqlite:///bot_db.db', connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine)
 session = Session(bind=engine)
-
 # endregion
 
 
@@ -175,20 +174,20 @@ def update(obj):
         session.commit()
 
     elif isinstance(obj, Channel):
-        row: Channel = session.query(Channel).filter(Channel.channel_id == obj.channel_id).first()
+        row: Channel = session.query(Channel).filter(Channel.name == obj.name).first()
 
         row.interval = obj.interval
         row.bed = obj.bed
         row.wake = obj.wake
-        row.channel_name = obj.name
+        row.name = obj.name
         row.logo = obj.logo
         row.pos = obj.pos
-
+        row.expire = obj.expire
         session.commit()
 
 
-def remain(channel_name: str) -> int:
-    rem = session.query(Message).filter(Message.to_channel == channel_name,
+def remain(channel: Channel) -> int:
+    rem = session.query(Message).filter(Message.to_channel == channel.name,
                                         Message.sent == False,
                                         ~Message.txt.startswith('.'),
                                         ~Message.txt.startswith('/')).all()
@@ -216,4 +215,4 @@ def get_last_msg(channel_name: str):
 # add(Channel(name='@ttiimmeerrr', admin=103086461, group_id=-1001141277396, expire=timedelta(days=7), plan=3))
 # add(Channel(name='@min1ch', admin=103086461, group_id=-1001174976706, interval='1m'))
 # add(Channel(name='@min5ch', admin=103086461, group_id=-1001497526440, interval='5m'))
-# add(Member(number=1, channel_name="@ttiimmeerrr", calendar=JDateTime().now().to_date()-timedelta(days=1)))
+# add(Member(number=2, channel_name="@ttiimmeerrr", calendar=JDateTime().now().to_date()))

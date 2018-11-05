@@ -1,8 +1,8 @@
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip
 import multiprocessing
 from PIL import Image
-import db
 import logging
+import db
 import re
 import os
 
@@ -36,6 +36,16 @@ def id_remove(text: str, channel: db.Channel) -> str:
         logging.error("id_remove {}".format(E))
 
 
+def logo_by_name(channel: db.Channel, logo_dir=None):
+    if not logo_dir:
+        logo_dir = f'logo/{channel.name}.png'
+
+    lg = TextClip(txt=channel.name, size=(300, 200), stroke_color='white', stroke_width=1)
+    lg.save_frame(logo_dir)
+
+    return lg
+
+
 def image_watermark(photo: str, out:str, caption: str, channel: db.Channel) -> str:
     try:
         logo_dir = f'logo/{channel.name}.png'
@@ -52,8 +62,7 @@ def image_watermark(photo: str, out:str, caption: str, channel: db.Channel) -> s
         bg = Image.open(photo)
         if not coor == 0:
             if not os.path.exists(f'logo/{channel.name}.png'):
-                lg = TextClip(txt=channel.name, size=(300, 200), stroke_color='white', stroke_width=1)
-                lg.save_frame(logo_dir)
+                logo_by_name(channel)
 
             lg = Image.open(logo_dir)
 
@@ -83,9 +92,9 @@ def image_watermark(photo: str, out:str, caption: str, channel: db.Channel) -> s
             bg.save(out)
 
         if re.search(pattern, caption):
-            caption = id_remove(re.sub(pattern, '', caption), channel.name)
+            caption = id_remove(re.sub(pattern, '', caption), channel)
         else:
-            caption = id_remove(caption, channel.name)
+            caption = id_remove(caption, channel)
         return caption
     except Exception as E:
         logging.error("put {}".format(E))
@@ -112,7 +121,7 @@ def vid_watermark(vid: str, out: str, kind: str, caption, channel: db.Channel) -
                 .resize(width=size, height=size) \
                 .set_pos(pos.get(find))
         else:
-            logo = TextClip(txt=channel.name, size=(200, 100), stroke_color='white', stroke_width=1)\
+            logo = logo_by_name(channel)\
                 .set_duration(clip.duration)\
                 .resize(width=size, height=size)\
                 .set_pos(pos.get(find))
