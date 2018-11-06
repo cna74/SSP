@@ -28,7 +28,6 @@ def sleep(entry=None, bed=None, wake=None):
 
 
 def time_is_in(now, channel: db.Channel):
-
     interval = (int(channel.interval[:-2]),)
     if channel.interval.endswith("mr"):
         interval = np.arange(0, 60, interval[0], dtype=np.uint8)
@@ -58,8 +57,7 @@ def remain(admin, channel):
 
         if rem > 0:
             date = step.strftime('%A %d %B %H:%M')
-            text = f'پیام های باقیمانده: {rem}\n' \
-                   f' کانال تا {date} تامین خواهد بود'
+            text = 'پیام های باقیمانده: {0}\nکانال تا {1} تامین خواهد بود'.format(rem, date)
         else:
             text = 'هیچ پیامی در صف نیست'
 
@@ -131,15 +129,15 @@ def select(bot, update):
         chat_id = um.message.chat_id
         message_id = um.message.message_id
         if data[0] == 'interval':
-            keyboard = [[Inline('01M', callback_data=f'01m;{data[1]}')]]
+            keyboard = [[Inline('01M', callback_data='01m;{}'.format(data[1]))]]
             for i in range(5, 60, 5):
                 keyboard.append(
-                    [Inline("{}M".format(str(i).zfill(2)), callback_data=f"{str(i).zfill(2)}m;{data[1]}")])
+                    [Inline("{}M".format(str(i).zfill(2)), callback_data="{}m;{}".format(str(i).zfill(2), data[1]))])
             for i in range(0, 24):
                 keyboard.append(
-                    [Inline("{}H".format(str(i).zfill(2)), callback_data=f'{str(i).zfill(2)}h;{data[1]}')])
+                    [Inline("{}H".format(str(i).zfill(2)), callback_data='{}h;{}'.format(str(i).zfill(2), data[1]))])
             keyboard = np.array(keyboard).reshape((-1, 6)).tolist()
-            keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data=f'setting;{data[1]}')])
+            keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data='setting;{}'.format(data[1]))])
             bot.edit_message_text(chat_id=chat_id,
                                   message_id=message_id,
                                   text="گام اول:\n"
@@ -157,10 +155,10 @@ def select(bot, update):
             keyboard = []
             for i in range(1, 25):
                 keyboard.append(
-                    [Inline('{}:00'.format(str(i).zfill(2)), callback_data=f"{str(i).zfill(2)}w;{data[1]}")])
+                    [Inline('{}:00'.format(str(i).zfill(2)), callback_data="{}w;{}".format(str(i).zfill(2), data[1]))])
             keyboard = np.array(keyboard).reshape((6, -1)).tolist()
-            keyboard.append([Inline('off', callback_data=f"offw;{data[1]}")])
-            keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data=f'setting;{data[1]}')])
+            keyboard.append([Inline('off', callback_data="offw;{}".format(data[1]))])
+            keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data='setting;{}'.format(data[1]))])
             bot.edit_message_text(chat_id=chat_id,
                                   message_id=message_id,
                                   text="بات از چه ساعتی شروع به کار کند؟",
@@ -170,10 +168,10 @@ def select(bot, update):
             keyboard = []
             for i in range(1, 25):
                 keyboard.append(
-                    [Inline('{}:00'.format(str(i).zfill(2)), callback_data=f"{str(i).zfill(2)}b;{data[1]}")])
+                    [Inline('{}:00'.format(str(i).zfill(2)), callback_data="{}b;{}".format(str(i).zfill(2), data[1]))])
             keyboard = np.array(keyboard).reshape((6, -1)).tolist()
-            keyboard.append([Inline('off', callback_data=f"offw;{data[1]}")])
-            keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data=f'setting;{data[1]}')])
+            keyboard.append([Inline('off', callback_data="offw;{}".format(data[1]))])
+            keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data='setting;{}'.format(data[1]))])
             bot.edit_message_text(chat_id=chat_id,
                                   message_id=message_id,
                                   text="بات در چه ساعتی خاموش شود؟",
@@ -184,9 +182,9 @@ def select(bot, update):
                                   message_id=message_id,
                                   text="نمودار در چه بازه زمانی باشد؟",
                                   reply_markup=InlineKeyboardMarkup(
-                                      [[Inline('یک هفته', callback_data=f"1w;{data[1]}"),
-                                        Inline('یک ماه', callback_data=f"1m;{data[1]}"),
-                                        Inline('یک سال', callback_data=f"1y;{data[1]}")]]
+                                      [[Inline('یک هفته', callback_data="1w;{}".format(data[1])),
+                                        Inline('یک ماه', callback_data="1m;{}".format(data[1])),
+                                        Inline('یک سال', callback_data="1y;{}".format(data[1]))]]
                                   ))
             return graph
         elif data[0] == 'logo':
@@ -196,7 +194,7 @@ def select(bot, update):
                                        "اگر نمیتونی یا بلد نیستی اینکار رو بکنی"
                                        " میتونم از اسم کانال به عنوان لوگو استفاده کنم",
                                   reply_markup=InlineKeyboardMarkup(
-                                      [[Inline('استفاده از نام کانال', callback_data=f"name;{data[1]}")]]))
+                                      [[Inline('استفاده از نام کانال', callback_data="name;{}".format(data[1]))]]))
             return set_logo
         elif data[0] == 'up':
             channel = db.find('channel', name=data[1])
@@ -232,9 +230,9 @@ def step2(bot, update):
                                            "@s_for_cna".format(str(interval).zfill(2),
                                                                str(interval * 2).zfill(2)),
                                       reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('حالت  1️⃣', callback_data=f'{interval}mr;{ch_name}'),
-                                            Inline('حالت  2️⃣', callback_data=f'{interval}mf;{ch_name}')],
-                                           [Inline('لغو، بازگشت', callback_data=f'_;{ch_name}')]])
+                                          [[Inline('حالت  1️⃣', callback_data='{}mr;{}'.format(interval, ch_name)),
+                                            Inline('حالت  2️⃣', callback_data='{}mf;{}'.format(interval, ch_name))],
+                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
                                       )
             else:
                 bot.edit_message_text(chat_id=um.message.chat_id,
@@ -244,8 +242,8 @@ def step2(bot, update):
                                            "از ما کمک بگیرید:\n"
                                            "@s_for_cna".format(str(interval).zfill(2)),
                                       reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('تایید', callback_data=f'{interval}mr;{ch_name}')],
-                                           [Inline('لغو، بازگشت', callback_data=f'_;{ch_name}')]])
+                                          [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
+                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
                                       )
 
             return done
@@ -263,9 +261,9 @@ def step2(bot, update):
                                            "@s_for_cna".format(str(interval).zfill(2),
                                                                str(interval * 2).zfill(2)),
                                       reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('حالت  1️⃣', callback_data=f'{interval}hr;{ch_name}'),
-                                            Inline('حالت  2️⃣', callback_data=f'{interval}hf;{ch_name}')],
-                                           [Inline('لغو، بازگشت', callback_data=f'_;{ch_name}')]])
+                                          [[Inline('حالت  1️⃣', callback_data='{}hr;{}'.format(interval, ch_name)),
+                                            Inline('حالت  2️⃣', callback_data='{}hf;{}'.format(interval, ch_name))],
+                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
                                       )
             else:
                 bot.edit_message_text(chat_id=um.message.chat_id,
@@ -276,8 +274,8 @@ def step2(bot, update):
                                            "از ما کمک بگیرید:\n"
                                            "@s_for_cna".format(str(interval).zfill(2)),
                                       reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('تایید', callback_data=f'{interval}mr;{ch_name}')],
-                                           [Inline('لغو، بازگشت', callback_data=f'_;{ch_name}')]])
+                                          [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
+                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
                                       )
             return done
         elif interval == "setting":
@@ -332,7 +330,7 @@ def graph(self, _, update):
             admin = um.message.chat_id
             data = um.data
             domain, ch_name = data.split(';')
-            save_in = f"plot/{ch_name}.png"
+            save_in = "plot/{}.png".format(ch_name)
 
             d = {'1w': 7, '1m': 31, '1y': 365}
             domain = d.get(domain)
@@ -375,15 +373,16 @@ def graph(self, _, update):
 
             self.robot.send_photo(chat_id=um.message.chat_id,
                                   photo=open(save_in, 'rb'),
-                                  caption=f"از {now} تا {til} در {days} روز\n"
-                                          f" کمترین میزان تعداد اعضا 🔻 {y.min()}\n"
-                                          f" بیشترین تعداد اعضا🔺 {y.max()}\n"
-                                          f" میانگین سرعت عضو شدن اعضا در روز {diff}\n"
-                                          f"پیش بینی برای {domain} روز آینده برابر {prediction}")
+                                  caption="از {} تا {} در {} روز\n" \
+                                          " کمترین میزان تعداد اعضا 🔻 {}\n" \
+                                          " بیشترین تعداد اعضا🔺 {}\n" \
+                                          " میانگین سرعت عضو شدن اعضا در روز {}\n" \
+                                          "پیش بینی برای {} روز آینده برابر {}".format(
+                                      days, til, now, y.min(), y.max(), diff, prediction, domain))
             os.remove(save_in)
             return ConversationHandler.END
     except Exception as E:
-        print(E)
+        logging.error("graph {}".format(E))
 
 
 def set_logo(bot, update):
@@ -392,14 +391,14 @@ def set_logo(bot, update):
             um = update.callback_query
             comm, name = um.data.split(';')
             chat_id = um.message.chat_id
-            channel = db.find('channel', admin=chat_id, name=name)
+            channel: db.Channel = db.find('channel', admin=chat_id, name=name)
             editor.logo_by_name(channel)
             channel.logo = True
             keyboard = []
             for i in range(1, 10):
-                keyboard.append([Inline(str(i), callback_data=f"{i};{channel.name}")])
+                keyboard.append([Inline(str(i), callback_data="{};{}".format(i, channel.name))])
             keyboard = np.array(keyboard).reshape((3, 3)).tolist()
-            keyboard.append([Inline('هیچکدام', callback_data=f'0;{channel.name}')])
+            keyboard.append([Inline('هیچکدام', callback_data='0;{}'.format(channel.name))])
 
             bot.send_photo(chat_id=chat_id,
                            reply_to_message_id=um.message_id,
@@ -425,15 +424,15 @@ def set_logo(bot, update):
                 res = db.find('channel', admin=chat_id)
             if isinstance(res, db.Channel) and mime.startswith('image') and size < (8 * 1025 * 1024):
                 channel = res
-                bot.get_file(file_id=file_id).download(f'logo/{channel.name}.png')
+                bot.get_file(file_id=file_id).download('logo/{}.png'.format(channel.name))
                 channel.logo = True
                 db.update(channel)
 
                 keyboard = []
                 for i in range(1, 10):
-                    keyboard.append([Inline(str(i), callback_data=f"{i};{channel.name}")])
+                    keyboard.append([Inline(str(i), callback_data="{};{}".format(i, channel.name))])
                 keyboard = np.array(keyboard).reshape((3, 3)).tolist()
-                keyboard.append([Inline('هیچکدام', callback_data=f'0;{channel.name}')])
+                keyboard.append([Inline('هیچکدام', callback_data='0;{}'.format(channel.name))])
 
                 bot.send_photo(chat_id=chat_id,
                                reply_to_message_id=um.message_id,
@@ -473,7 +472,7 @@ def set_pos(bot, update):
                          reply_to_message_id=um.message.message_id,
                          text="تغییرات اعمال شد",
                          reply_markup=InlineKeyboardMarkup(
-                             [[Inline('وضعیت', callback_data=f'{admin};{name}')]]
+                             [[Inline('وضعیت', callback_data='{};{}'.format(admin, name))]]
                          ))
         return setting
     except Exception as E:
@@ -589,12 +588,10 @@ def set_interval(bot, update, args):
                                      "از ما کمک بگیرید:\n"
                                      "@s_for_cna".format(str(interval).zfill(2),
                                                          str(interval * 2).zfill(2)),
-                                reply_markup=InlineKeyboardMarkup([[Inline('حالت  1️⃣',
-                                                                           callback_data=f'{interval}mr;{ch_name}'),
-                                                                    Inline('حالت  2️⃣',
-                                                                           callback_data=f'{interval}mf;{ch_name}')],
-                                                                   [Inline('لغو، بازگشت',
-                                                                           callback_data=f'_;{ch_name}')]]))
+                                reply_markup=InlineKeyboardMarkup(
+                                    [[Inline('حالت  1️⃣', callback_data='{}mr;{}'.format(interval, ch_name)),
+                                      Inline('حالت  2️⃣', callback_data='{}mf;{}'.format(interval, ch_name))],
+                                     [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]]))
                         else:
                             bot.send_message(
                                 chat_id=um.chat_id,
@@ -603,10 +600,9 @@ def set_interval(bot, update, args):
                                      "پیام ها در ساعاتی مانند 01:{0}, 02:{0} ارسال میشوند\n"
                                      "از ما کمک بگیرید:\n"
                                      "@s_for_cna".format(str(interval).zfill(2)),
-                                reply_markup=InlineKeyboardMarkup([[Inline('تایید',
-                                                                           callback_data=f'{interval}mr;{ch_name}')],
-                                                                   [Inline('لغو، بازگشت',
-                                                                           callback_data=f'_;{ch_name}')]]))
+                                reply_markup=InlineKeyboardMarkup(
+                                    [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
+                                     [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]]))
                         return done
 
     except Exception as E:

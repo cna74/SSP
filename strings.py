@@ -16,21 +16,18 @@ def status_upgrade(channel: db.Channel):
 def status(channel, remain):
     expire = JalaliDatetime().from_datetime(channel.expire).strftime("%x")
     logo = "استفاده از نام کانال" if not channel.logo else "✔️"
-
-    keyboard = [[Inline('وقفه ⏲️', callback_data=f'interval;{channel.name}'),
-                 Inline('ساعت توقف 🕰️', callback_data=f'bed;{channel.name}'),
-                 Inline('ساعت شروع 🕰️', callback_data=f'wake;{channel.name}')],
-                [Inline('مشاهده نمودار 📈', callback_data=f"graph;{channel.name}"),
-                 Inline('تنظیم لوگو 🖼️', callback_data=f"logo;{channel.name}")],
-                [Inline('تمدید 📆', callback_data=f'up;{channel.name}')]]
+    plan = dict([(0, "پایه 🏅"), (1, "برنز 🥉"), (2, "نقره 🥈"), (3, "طلایی 🥇")]).get(channel.plan)
+    keyboard = [[Inline('وقفه ⏲️', callback_data='interval;{}'.format(channel.name)),
+                 Inline('ساعت توقف 🕰️', callback_data='bed;{}'.format(channel.name)),
+                 Inline('ساعت شروع 🕰️', callback_data='wake;{}'.format(channel.name))],
+                [Inline('مشاهده نمودار 📈', callback_data="graph;{}".format(channel.name)),
+                 Inline('تنظیم لوگو 🖼️', callback_data="logo;{}".format(channel.name))],
+                [Inline('تمدید 📆', callback_data='up;{}'.format(channel.name))]]
     keyboard = InlineKeyboardMarkup(keyboard)
 
-    text = (f'میزان وقفه ⏳= {channel.interval}\n'
-            f'ساعت توقف 🕰= {channel.bed}\n'
-            f'ساعت شروع 🕰= {channel.wake}\n'
-            f'لوگو = {logo}\n\n'
-            f'{remain}\n'
-            f'اعتبار شما تا {expire}')
+    text = "میزان وقفه ⏳= {}\nساعت توقف 🕰= {}\nساعت شروع 🕰= {}\nلوگو = {}\n\n طرح = {}\n{}\nاعتبار شما تا {}".format(
+        channel.interval, channel.bed, channel.wake, logo, plan, remain, expire
+    )
 
     return text, keyboard
 
@@ -82,6 +79,8 @@ set_logo_fail = "بنظر می آید شما صاحب چند اشتراک از �
 set_logo_else = "مقادیر وارده اشتباه است." + admin
 
 admin_hint = "برای اضافه کردن کانال جدید\n" \
-             "/admin add <group_id> <admin_id> <channel_name> <plan>\n\n" \
+             "/admin add <gp_id> <admin_id> <ch_name> <plan>\n\n" \
              "برای تمدید کانال\n" \
-             "/admin ren <channel_name> <days>"
+             "/admin ren <ch_name> <days>\n\n" \
+             "برای تغییر طرح \n" \
+             "/admin plan <ch_name> <plan>"
