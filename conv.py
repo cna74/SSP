@@ -86,7 +86,7 @@ def status(bot, update):
                 return select
 
             elif isinstance(channels, list):
-                lst = [[Inline(i.name, callback_data=f"_;{i.name}")] for i in channels]
+                lst = [[Inline(i.name, callback_data="_;{}".format(i.name))] for i in channels]
                 bot.send_message(chat_id=admin,
                                  text="شما صاحب چندین کانال هستید\nمایل به مشاهده تنظیمات کدام یک هستید؟",
                                  reply_markup=InlineKeyboardMarkup(lst))
