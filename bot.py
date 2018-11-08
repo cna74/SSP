@@ -428,7 +428,7 @@ class SSP:
             if args:
                 command = args.split()[0]
                 if command == "add":
-                    group_id, admin, channel_name, plan = args.split()[1:]
+                    group_id, admin, channel_name, plan = args[1:]
                     if not db.find('channel', name=channel_name):
                         channel = db.Channel(name=channel_name, admin=int(admin), group_id=int(group_id), plan=int(plan))
                         db.add(channel)
@@ -436,7 +436,7 @@ class SSP:
                                                 reply_to_message_id=message_id,
                                                 text="ثبت شد \n\n{}".format(tuple(channel.__dict__.items())[1:]))
                 elif command == "ren":
-                    channel_name, expire = args.split()[1:]
+                    channel_name, expire = args[1:]
                     if db.find("channel", name=channel_name):
                         channel = db.find("channel", name=channel_name)
                         channel.expire + timedelta(days=int(expire))
@@ -445,7 +445,7 @@ class SSP:
                                                 reply_to_message_id=message_id,
                                                 text="ثبت شد \n\n{}".format(tuple(channel.__dict__.items())[1:]))
                 elif command == "plan":
-                    channel_name, plan = args.split()[1:]
+                    channel_name, plan = args[1:]
                     channel = db.find("channel", name=channel_name)
                     channel.plan = int(plan)
                     db.update(channel)
