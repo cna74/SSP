@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
 
-admin = "\n\nAdmin: @s_for_cna\nChannel: @ChannelBotManager"
+admin = "\n➖   ➖   ➖   ➖   ➖\n\nAdmin: @s_for_cna\nChannel: @ChannelBotManager"
 
 
 def status_upgrade(channel):
@@ -47,8 +47,7 @@ start = """سلام 🤓✋🏻
 اگر شک داری میتونی یک هفته رایگان تست کنی
 حتما راهنما رو قبل از اضافه کردن به کانال بخون
 
-🤓 اگر سوال یا ابهامی داری میتونی ازم بپرسی
-➖   ➖   ➖   ➖   ➖""" + admin
+🤓 اگر سوال یا ابهامی داری میتونی ازم بپرسی""" + admin
 
 start_buy = """جدول طرح ها لطفا مبلغ مورد نظر را به شماره حساب:\n
 6037-9974-3866-3685\n
@@ -83,3 +82,5 @@ admin_hint = "برای اضافه کردن کانال جدید\n" \
              "/admin ren <ch_name> <days>\n\n" \
              "برای تغییر طرح \n" \
              "/admin plan <ch_name> <plan>"
+
+congrats = "تبریک، بات با موفقیت در گروه ثبت شد"+admin

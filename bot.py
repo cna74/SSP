@@ -461,23 +461,23 @@ class SSP:
                 self.robot.send_message(chat_id=chat_id,
                                         text=strings.admin_hint)
         except Exception as E:
-            logging.error("admin {}".format(E))
+            logging.error("admin: {}".format(E))
 
     def send_info(self, _, update):
         try:
             um = update.message
             if isinstance(um.new_chat_members, list):
                 chat_member = um.new_chat_members[0]
-                channels = db.find('channel', admin=um.from_user.id)
+                channel = db.find('channel', group_id=um.chat_id)
 
                 if chat_member.id == self.robot.id:
-                    if um.chat.type == 'supergroup' and um.chat_id in [i.group_id for i in channels]:
-                        self.robot.send_message(chat_id=um.chat_id, text="تبریک، بات با موفقیت در گروه ثبت شد")
+                    if um.chat.type == 'supergroup' and isinstance(channel, db.Channel):
+                        self.robot.send_message(chat_id=um.chat_id, text=strings.congrats)
                     else:
                         self.robot.send_message(chat_id=um.chat_id, text=um.chat_id)
                         self.robot.leave_chat(um.chat_id)
         except Exception as E:
-            print(E)
+            logging.error("send_info: {}".format(E))
 
     def run(self):
         dpa = self.updater.dispatcher.add_handler

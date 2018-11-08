@@ -54,16 +54,16 @@ def image_watermark(photo, out, caption, channel) -> str:
         logo_dir = 'logo/{}.png'.format(channel.name)
         pattern = re.compile(r':\S{,2}:', re.I)
         div = 5
-        coor_pt = re.compile(r'\d', re.I)
+        roi_pt = re.compile(r'\d', re.I)
 
         if re.search(pattern, caption):
             i_cor = ''.join(re.findall(pattern, caption)[0])
-            coor = int(re.findall(coor_pt, i_cor)[0]) if re.findall(coor_pt, i_cor)[0] else channel.pos
+            roi = int(re.findall(roi_pt, i_cor)[0]) if re.findall(roi_pt, i_cor)[0] else channel.pos
         else:
-            coor = channel.pos
+            roi = channel.pos
 
         bg = Image.open(photo)
-        if not coor == 0:
+        if not roi == 0:
             if not os.path.exists('logo/{}.png'.format(channel.name)):
                 logo_by_name(channel)
 
@@ -88,8 +88,8 @@ def image_watermark(photo, out, caption, channel) -> str:
                      8: (res[0] // 2 - lg_sz[0] // 2, res[1] - lg_sz[1]),
                      9: (res[0] - lg_sz[0], res[1] - lg_sz[1])}
 
-            if dict1.get(coor):
-                bg.paste(lg, dict1.get(coor), lg)
+            if dict1.get(roi):
+                bg.paste(lg, dict1.get(roi), lg)
                 bg.save(out)
         else:
             bg.save(out)
@@ -100,7 +100,7 @@ def image_watermark(photo, out, caption, channel) -> str:
             caption = id_remove(caption, channel)
         return caption
     except Exception as E:
-        logging.error("put {}".format(E))
+        logging.error("image_watermark {}".format(E))
 
 
 def vid_watermark(vid, out, kind, caption, channel) -> str:
