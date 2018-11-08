@@ -426,7 +426,7 @@ class SSP:
             message_id = update.message.message_id
             command = group_id = admin = channel_name = plan = expire = None
             if args:
-                command = args.split()[0]
+                command = args[0]
                 if command == "add":
                     group_id, admin, channel_name, plan = args[1:]
                     if not db.find('channel', name=channel_name):
