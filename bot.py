@@ -430,7 +430,7 @@ class SSP:
                 if command == "add":
                     group_id, admin, channel_name, plan = args.split()[1:]
                     if not db.find('channel', name=channel_name):
-                        channel = db.Channel(name=channel_name, admin=admin, group_id=group_id, plan=plan)
+                        channel = db.Channel(name=channel_name, admin=int(admin), group_id=int(group_id), plan=int(plan))
                         db.add(channel)
                         self.robot.send_message(chat_id=chat_id,
                                                 reply_to_message_id=message_id,
