@@ -11,6 +11,7 @@ import conv
 import var
 import db
 import os
+
 warnings.simplefilter("ignore", category=Warning)
 
 sina, lili = 103086461, 303962908
@@ -32,7 +33,7 @@ class SSP:
             pass
 
     @staticmethod
-    def time_is_in(now, channel: db.Channel):
+    def time_is_in(now, channel):
         interval = (int(channel.interval[:-2]),)
         if channel.interval.endswith("mr"):
             interval = np.arange(0, 60, interval[0], dtype=np.uint8)
@@ -54,7 +55,7 @@ class SSP:
                 from_gp = ue.chat_id
                 msg_gp_id = ue.message_id
                 channel = db.find('channel', group_id=from_gp)
-                message: db.Message = db.find(table='message', msg_gp_id=msg_gp_id, gp_id=from_gp)
+                message = db.find(table='message', msg_gp_id=msg_gp_id, gp_id=from_gp)
 
                 # after sent
                 if ue.text and message.sent:
@@ -178,7 +179,7 @@ class SSP:
 
             # regular
             elif um:
-                channel: db.Channel = db.find(table='channel', group_id=um.chat_id)
+                channel = db.find(table='channel', group_id=um.chat_id)
                 if um.text:
                     other = ""
                     txt = um.text
@@ -437,7 +438,7 @@ class SSP:
                 elif command == "ren":
                     channel_name, expire = args.split()[1:]
                     if db.find("channel", name=channel_name):
-                        channel: db.Channel = db.find("channel", name=channel_name)
+                        channel = db.find("channel", name=channel_name)
                         channel.expire + timedelta(days=int(expire))
                         db.update(channel)
                         self.robot.send_message(chat_id=chat_id,

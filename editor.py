@@ -4,7 +4,6 @@ import multiprocessing
 from PIL import Image
 import warnings
 import logging
-import db
 import re
 import os
 
@@ -13,7 +12,7 @@ mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/u
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
-def id_remove(text: str, channel: db.Channel) -> str:
+def id_remove(text, channel) -> str:
     try:
         pattern = re.compile(r'(@\S+)', re.I)
         pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
@@ -40,7 +39,7 @@ def id_remove(text: str, channel: db.Channel) -> str:
         logging.error("id_remove {}".format(E))
 
 
-def logo_by_name(channel: db.Channel, logo_dir=None):
+def logo_by_name(channel, logo_dir=None):
     if not logo_dir:
         logo_dir = 'logo/{}.png'.format(channel.name)
 
@@ -50,7 +49,7 @@ def logo_by_name(channel: db.Channel, logo_dir=None):
     return lg
 
 
-def image_watermark(photo: str, out:str, caption: str, channel: db.Channel) -> str:
+def image_watermark(photo, out, caption, channel) -> str:
     try:
         logo_dir = 'logo/{}.png'.format(channel.name)
         pattern = re.compile(r':\S{,2}:', re.I)
@@ -104,7 +103,7 @@ def image_watermark(photo: str, out:str, caption: str, channel: db.Channel) -> s
         logging.error("put {}".format(E))
 
 
-def vid_watermark(vid: str, out: str, kind: str, caption, channel: db.Channel) -> str:
+def vid_watermark(vid, out, kind, caption, channel) -> str:
     try:
         logo_dir = "logo/{}.png".format(channel.name)
         pattern = re.compile(r':\d:')

@@ -13,7 +13,6 @@ class Channel(Base):
     def __init__(self, name, admin, group_id, plan,
                  interval='11mr', bed='off', wake='off', logo=False, pos=7,
                  register=JDateTime().now().to_datetime(), expire=timedelta):
-
         # required
         self.name = name
         self.admin = admin
@@ -100,6 +99,8 @@ class Message(Base):
 engine = create_engine('sqlite:///bot_db.db', connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine)
 session = Session(bind=engine)
+
+
 # endregion
 
 
@@ -159,7 +160,7 @@ def find(table, **col):
 
 def update(obj):
     if isinstance(obj, Message):
-        row: Message = session.query(Message).get(obj.id)
+        row = session.query(Message).get(obj.id)
 
         row.txt = obj.txt
         row.msg_ch_id = obj.msg_ch_id
@@ -174,7 +175,7 @@ def update(obj):
         session.commit()
 
     elif isinstance(obj, Channel):
-        row: Channel = session.query(Channel).filter(Channel.name == obj.name).first()
+        row = session.query(Channel).filter(Channel.name == obj.name).first()
 
         row.interval = obj.interval
         row.bed = obj.bed
@@ -186,7 +187,7 @@ def update(obj):
         session.commit()
 
 
-def remain(channel: Channel) -> int:
+def remain(channel) -> int:
     rem = session.query(Message).filter(Message.to_channel == channel.name,
                                         Message.sent == False,
                                         ~Message.txt.startswith('.'),
@@ -196,11 +197,11 @@ def remain(channel: Channel) -> int:
     return len(rem)
 
 
-def get_last_msg(channel_name: str):
-    res: Message = session.query(Message).filter(Message.sent == False,
-                                                 ~Message.txt.startswith('.'),
-                                                 ~Message.txt.startswith('/'),
-                                                 Message.to_channel == channel_name).first()
+def get_last_msg(channel_name):
+    res = session.query(Message).filter(Message.sent == False,
+                                        ~Message.txt.startswith('.'),
+                                        ~Message.txt.startswith('/'),
+                                        Message.to_channel == channel_name).first()
     if res:
         if res.other.isnumeric():
             media = res.other
@@ -210,7 +211,6 @@ def get_last_msg(channel_name: str):
                                                 Message.to_channel == channel_name,
                                                 Message.other == media).all()
     return res
-
 
 # add(Channel(name='@ttiimmeerrr', admin=103086461, group_id=-1001141277396, expire=timedelta(days=7), plan=3))
 # add(Channel(name='@min1ch', admin=103086461, group_id=-1001174976706, interval='1m'))

@@ -27,7 +27,7 @@ def sleep(entry=None, bed=None, wake=None):
     return False
 
 
-def time_is_in(now, channel: db.Channel):
+def time_is_in(now, channel):
     interval = (int(channel.interval[:-2]),)
     if channel.interval.endswith("mr"):
         interval = np.arange(0, 60, interval[0], dtype=np.uint8)
@@ -99,7 +99,7 @@ def status(bot, update):
 def setting(bot, update):
     try:
         if update.callback_query:
-            data: str = update.callback_query.data
+            data = update.callback_query.data
             admin, name = data.split(';')
             if not admin == '_':
                 channel = db.find("channel", admin=admin, name=name)
@@ -113,7 +113,7 @@ def setting(bot, update):
         else:
             um = update.message
             admin = um.from_user
-            channel: db.Channel = db.find('channel', admin=admin)
+            channel = db.find('channel', admin=admin)
             text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
             bot.send_message(chat_id=admin.id, text=text, reply_markup=keyboard)
             return select
@@ -124,8 +124,8 @@ def setting(bot, update):
 def select(bot, update):
     try:
         um = update.callback_query
-        data: str = um.data
-        data: list = data.split(';')
+        data = um.data
+        data = data.split(';')
         chat_id = um.message.chat_id
         message_id = um.message.message_id
         if data[0] == 'interval':
@@ -210,13 +210,13 @@ def step2(bot, update):
     if update.callback_query:
         um = update.callback_query
         data = um.data.split(';')
-        interval: str = data[0]
-        ch_name: str = data[1]
+        interval = data[0]
+        ch_name = data[1]
         admin = um.message.chat_id
         message_id = um.message.message_id
 
         if interval.endswith('m'):
-            interval: int = int(interval[:-1])
+            interval = int(interval[:-1])
             if 1 <= interval <= 30:
                 bot.edit_message_text(chat_id=um.message.chat_id,
                                       message_id=um.message.message_id,
@@ -248,7 +248,7 @@ def step2(bot, update):
 
             return done
         elif interval.endswith('h'):
-            interval: int = int(interval[:-1])
+            interval = int(interval[:-1])
             if 1 <= interval < 13:
                 bot.edit_message_text(chat_id=um.message.chat_id,
                                       message_id=um.message.message_id,
@@ -289,12 +289,12 @@ def done(bot, update):
     try:
         if update.callback_query:
             um = update.callback_query
-            data: str = um.data
+            data = um.data
             part1, channel_name = data.split(';')
             chat_id = um.message.chat_id
             message_id = um.message.message_id
 
-            channel: db.Channel = db.find('channel', name=channel_name)
+            channel = db.find('channel', name=channel_name)
 
             if part1 == '_':
                 pass
@@ -391,7 +391,7 @@ def set_logo(bot, update):
             um = update.callback_query
             comm, name = um.data.split(';')
             chat_id = um.message.chat_id
-            channel: db.Channel = db.find('channel', admin=chat_id, name=name)
+            channel = db.find('channel', admin=chat_id, name=name)
             editor.logo_by_name(channel)
             channel.logo = True
             keyboard = []
@@ -415,7 +415,7 @@ def set_logo(bot, update):
             um = update.message
             chat_id = um.chat_id
             file_id = um.document.file_id
-            mime: str = um.document.mime_type
+            mime = um.document.mime_type
             size = um.document.file_size
             name = um.caption if um.caption else None
             if name:
@@ -536,11 +536,11 @@ def start_register(bot, update):
         chat_id = um.chat_id
         admin = um.from_user.id
 
-        text: str = um.text
+        text = um.text
         text = text.split()
 
-        group_id: str = text[0]
-        name: str = text[1]
+        group_id = text[0]
+        name = text[1]
         if group_id.startswith('-') and group_id[1:].isnumeric() and name.startswith('@'):
             channel = db.Channel(name=name, admin=admin, group_id=int(group_id), plan=3,
                                  expire=timedelta(days=7))
@@ -616,7 +616,7 @@ def cancel(_, __):
     return ConversationHandler.END
 
 
-def conversation(updater: Updater):
+def conversation(updater):
     # start
     updater.dispatcher.add_handler(
         ConversationHandler(

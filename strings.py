@@ -1,11 +1,10 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
-import db
 
 admin = "\n\nAdmin: @s_for_cna\nChannel: @ChannelBotManager"
 
 
-def status_upgrade(channel: db.Channel):
+def status_upgrade(channel):
     payment = dict({0: 5000, 1: 8000, 2: 11000, 3: 14000}).get(channel.plan)
 
     return "برای تمدید مبلغ {} را به شماره حساب \n" \
