@@ -428,9 +428,10 @@ class SSP:
             if args:
                 command = args[0]
                 if command == "add":
-                    group_id, admin, channel_name, plan = args[1:]
+                    group_id, admin, channel_name, plan, expire = args[1:]
                     if not db.find('channel', name=channel_name):
-                        channel = db.Channel(name=channel_name, admin=int(admin), group_id=int(group_id), plan=int(plan))
+                        channel = db.Channel(name=channel_name, admin=int(admin),
+                                             group_id=int(group_id), plan=int(plan), expire=timedelta(days=int(expire)))
                         db.add(channel)
                         self.robot.send_message(chat_id=chat_id,
                                                 reply_to_message_id=message_id,
@@ -452,6 +453,10 @@ class SSP:
                     self.robot.send_message(chat_id=chat_id,
                                             reply_to_message_id=message_id,
                                             text="ثبت شد \n\n{}".format(tuple(channel.__dict__.items())[1:]))
+                else:
+                    self.robot.send_message(chat_id=chat_id,
+                                            reply_to_message_id=message_id,
+                                            text="command {} not found".format(args[0]))
             else:
                 self.robot.send_message(chat_id=chat_id,
                                         text=strings.admin_hint)
