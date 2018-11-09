@@ -77,8 +77,8 @@ class SSP:
 
                     if ue.photo:
                         media = ue.photo[-1].file_id
-                        dir_ = "./image/{}.jpg".format(channel.name)
-                        out = './image/{}_out.jpg'.format(channel.name)
+                        dir_ = "image/{}.jpg".format(channel.name)
+                        out = 'image/{}_out.jpg'.format(channel.name)
                         self.robot.getFile(media).download(dir_)
 
                         message.kind = "photo"
@@ -92,8 +92,8 @@ class SSP:
                     elif ue.animation:
                         media = ue.animation.file_id
                         mime = str(um.animation.mime_type).split('/')[1]
-                        dir_ = "./gif/{}.{}".format(channel.name, mime)
-                        out = "./gif/{}_out.mp4".format(channel.name)
+                        dir_ = "gif/{}.{}".format(channel.name, mime)
+                        out = "gif/{}_out.mp4".format(channel.name)
                         size = ue.video.file_size / (1024 ** 2)
 
                         message.mime = mime
@@ -111,8 +111,8 @@ class SSP:
                     elif ue.video:
                         media = ue.video.file_id
                         mime = str(um.video.mime_type).split('/')[1]
-                        dir_ = "./vid/{}.{}".format(channel.name, mime)
-                        out = './vid/{}_out.mp4'.format(channel.name)
+                        dir_ = "vid/{}.{}".format(channel.name, mime)
+                        out = 'vid/{}_out.mp4'.format(channel.name)
                         size = ue.video.file_size / (1024 ** 2)
 
                         message.mime = mime
@@ -236,7 +236,7 @@ class SSP:
                         db.Message(from_group=um.chat_id, to_channel=channel.name, msg_gp_id=um.message_id, kind=kind,
                                    txt=text, file_id=file_id, size=size, mime=mime, other=other))
 
-            logging.info("save {}".format(tuple(message.__dict__.items()))[1:])
+            logging.info("save {}".format(message.__str__()))
         except Exception as E:
             logging.error('save {}'.format(E))
 
@@ -274,7 +274,7 @@ class SSP:
                 self.robot.send_media_group(chat_id=chat_id, media=media)
                 for msg in new_message:
                     db.update(msg)
-                logging.info('media_group sent {}'.format(tuple(message.__dict__.items())[1:]))
+                logging.info('media_group sent {}'.format(message.__str__()))
 
             # edited
             elif message.ch_a:
@@ -288,7 +288,7 @@ class SSP:
                                                                         message_id=message.msg_ch_id)
 
                 db.update(message)
-                logging.info('edit_msg {}'.format(tuple(message.__dict__.items())[1:]))
+                logging.info('edit_msg {}'.format(message.__str__()))
 
             # regular
             elif not message.ch_a:
@@ -300,8 +300,8 @@ class SSP:
                                                                 parse_mode=parse_mode).message_id
 
                 elif message.kind == 'photo':
-                    dir_ = "./image/{}.jpg".format(channel.name)
-                    out = "./image/{}_out.jpg".format(channel.name)
+                    dir_ = "image/{}.jpg".format(channel.name)
+                    out = "image/{}_out.jpg".format(channel.name)
                     if channel.plan >= 1:
                         self.robot.getFile(message.file_id).download(dir_)
                         txt = editor.image_watermark(photo=dir_, out=out, caption=message.txt, channel=channel)
@@ -314,8 +314,8 @@ class SSP:
 
                 elif message.kind == 'video':
                     form = message.mime
-                    dir_ = "./vid/{}.{}".format(channel.name, form)
-                    out = "./vid/{}_out.mp4".format(channel.name)
+                    dir_ = "vid/{}.{}".format(channel.name, form)
+                    out = "vid/{}_out.mp4".format(channel.name)
 
                     if message.size <= limit_size and channel.plan >= 3:
                         self.robot.getFile(message.file_id).download(dir_, timeout=10)
@@ -339,8 +339,8 @@ class SSP:
 
                 elif message.kind == 'animation':
                     form = message.mime
-                    dir_ = "./gif/{}.{}".format(channel.name, form)
-                    out = "./gif/{}_out.mp4".format(channel.name)
+                    dir_ = "gif/{}.{}".format(channel.name, form)
+                    out = "gif/{}_out.mp4".format(channel.name)
 
                     if message.size <= limit_size and channel.plan >= 2:
                         self.robot.getFile(message.file_id).download(dir_, timeout=10)
@@ -381,7 +381,7 @@ class SSP:
                     message.msg_ch_id = self.robot.send_sticker(chat_id=message.to_channel, sticker=message.file_id,
                                                                 caption=txt).message_id
 
-                logging.info('send_to_ch {}'.format(tuple(message.__dict__.items())[1:]))
+                logging.info('send_to_ch {}'.format(message.__str__()))
                 message.sent = True
                 message.ch_a = True
                 db.update(message)
@@ -391,7 +391,7 @@ class SSP:
         except AttributeError:
             pass
         except Exception as E:
-            logging.error('send_to_ch attempt {} Error: {}'.format(tuple(message.__dict__.items())[1:], E))
+            logging.error('send_to_ch attempt {} Error: {}'.format(message.__str__(), E))
             if attempt < 2:
                 self.send_to_ch(channel, attempt + 1)
             else:
@@ -435,7 +435,7 @@ class SSP:
                         db.add(channel)
                         self.robot.send_message(chat_id=chat_id,
                                                 reply_to_message_id=message_id,
-                                                text="ثبت شد \n\n{}".format(tuple(channel.__dict__.items())[1:]))
+                                                text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "ren":
                     channel_name, expire = args[1:]
                     if db.find("channel", name=channel_name):
@@ -444,7 +444,7 @@ class SSP:
                         db.update(channel)
                         self.robot.send_message(chat_id=chat_id,
                                                 reply_to_message_id=message_id,
-                                                text="ثبت شد \n\n{}".format(tuple(channel.__dict__.items())[1:]))
+                                                text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "plan":
                     channel_name, plan = args[1:]
                     channel = db.find("channel", name=channel_name)
@@ -452,7 +452,7 @@ class SSP:
                     db.update(channel)
                     self.robot.send_message(chat_id=chat_id,
                                             reply_to_message_id=message_id,
-                                            text="ثبت شد \n\n{}".format(tuple(channel.__dict__.items())[1:]))
+                                            text="ثبت شد \n\n{}".format(channel.__str__()))
                 else:
                     self.robot.send_message(chat_id=chat_id,
                                             reply_to_message_id=message_id,

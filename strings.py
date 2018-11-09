@@ -1,14 +1,14 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
 
-admin = "\n➖   ➖   ➖   ➖   ➖\n\nAdmin: @s_for_cna\nChannel: @ChannelBotManager"
+admin = "\n➖   ➖   ➖   ➖   ➖   ➖   ➖   ➖\nAdmin: @s_for_cna\nChannel: @ChannelBotManager"
 
 
 def status_upgrade(channel):
     payment = dict({0: 5000, 1: 8000, 2: 11000, 3: 14000}).get(channel.plan)
 
     return "برای تمدید مبلغ {} را به شماره حساب \n" \
-           "6037-9974-3866-3685\n" \
+           "`6037-9974-3866-3685`\n" \
            "به نام سینا علیزاده واریز کنید و سپس کد رهگیری را برای ادمین ارسال کنید".format(payment) + admin
 
 

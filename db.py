@@ -28,6 +28,9 @@ class Channel(Base):
         self.register = register
         self.expire = register + expire
 
+    def __str__(self):
+        return "ch_name {} ch_admin {} group_id {} plan {}".format(self.name, self.admin, self.group_id, self.plan)
+
     __tablename__ = "channel"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -78,6 +81,9 @@ class Message(Base):
         self.mime = mime
         self.other = other
 
+    def __str__(self):
+        return "from_group {} to_channel {} kind {}".format(self.from_group, self.to_channel, self.kind)
+
     __tablename__ = "message"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -99,8 +105,6 @@ class Message(Base):
 engine = create_engine('sqlite:///bot_db.db', connect_args={"check_same_thread": False})
 Base.metadata.create_all(bind=engine)
 session = Session(bind=engine)
-
-
 # endregion
 
 
