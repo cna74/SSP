@@ -1,7 +1,7 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
 
-admin = "\n➖   ➖   ➖   ➖   ➖   ➖   ➖   ➖\nAdmin: @s_for_cna\nChannel: @ChannelBotManager"
+admin = "\n➖   ➖   ➖   ➖   ➖   ➖   ➖   ➖\nAdmin: @S_for_Cna\nChannel: @Elite_Manager_ch"
 
 
 def status_upgrade(channel):
