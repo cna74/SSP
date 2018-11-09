@@ -8,7 +8,7 @@ import re
 import os
 
 warnings.simplefilter("ignore", category=Warning)
-# mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/usr/bin/convert'})
+mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/usr/bin/convert'})
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
