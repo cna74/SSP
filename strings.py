@@ -77,7 +77,7 @@ set_logo_fail = "بنظر می آید شما صاحب چند اشتراک از �
 set_logo_else = "مقادیر وارده اشتباه است." + admin
 
 admin_hint = "برای اضافه کردن کانال جدید\n" \
-             "/admin add <gp_id> <admin_id> <ch_name> <plan>\n\n" \
+             "/admin add <gp_id> <admin_id> <ch_name> <plan> <exp>\n\n" \
              "برای تمدید کانال\n" \
              "/admin ren <ch_name> <days>\n\n" \
              "برای تغییر طرح \n" \

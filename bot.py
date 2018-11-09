@@ -232,11 +232,12 @@ class SSP:
                         kind = 'sticker'
                         file_id = um.sticker.file_id
 
-                    db.add(
-                        db.Message(from_group=um.chat_id, to_channel=channel.name, msg_gp_id=um.message_id, kind=kind,
-                                   txt=text, file_id=file_id, size=size, mime=mime, other=other))
+                    message = db.Message(from_group=um.chat_id, to_channel=channel.name, msg_gp_id=um.message_id,
+                                         kind=kind, txt=text, file_id=file_id, size=size, mime=mime, other=other)
+                    db.add(message)
 
-            logging.info("save {}".format(message.__str__()))
+            if isinstance(message, db.Message):
+                logging.info("save {}".format(message.__str__()))
         except Exception as E:
             logging.error('save {}'.format(E))
 

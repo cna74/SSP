@@ -29,7 +29,8 @@ class Channel(Base):
         self.expire = register + expire
 
     def __str__(self):
-        return "ch_name {} ch_admin {} group_id {} plan {}".format(self.name, self.admin, self.group_id, self.plan)
+        return "ch_name: {}, ch_admin: {}, group_id: {}, plan {}".format(
+            self.name, self.admin, self.group_id, self.plan)
 
     __tablename__ = "channel"
 
@@ -82,7 +83,7 @@ class Message(Base):
         self.other = other
 
     def __str__(self):
-        return "from_group {} to_channel {} kind {}".format(self.from_group, self.to_channel, self.kind)
+        return "from_group: {}, to_channel: {}, kind: {}".format(self.from_group, self.to_channel, self.kind)
 
     __tablename__ = "message"
 

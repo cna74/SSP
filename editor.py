@@ -89,11 +89,9 @@ def image_watermark(photo, out, caption, channel) -> str:
                      9: (res[0] - lg_sz[0], res[1] - lg_sz[1])}
 
             if dict1.get(roi):
-                print(1)
                 bg.paste(lg, dict1.get(roi), lg)
                 bg.save(out)
         else:
-            print(2)
             bg.save(out)
 
         if re.search(pattern, caption):
