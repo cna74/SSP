@@ -30,7 +30,7 @@ def id_remove(text, channel) -> str:
             for state in state:
                 if state.lower() not in (channel.name,):
                     text = re.sub(state, channel.name, text)
-            if text.lower().strip()[len(channel.name) * (-2):].find(channel.name) == -1:
+            if text.lower().strip()[len(channel.name) * (-5):].find(channel.name) == -1:
                 text = text + '\n' + channel.name
             return text
         else:

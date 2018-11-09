@@ -9,10 +9,10 @@ import editor
 import db
 import os
 
-matplotlib.use('AGG', force=True)
+matplotlib.use("AGG", force=True)
 import matplotlib.pyplot as plt
 
-logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
+logging.basicConfig(filename="report.log", level=logging.INFO, format="%(asctime)s: %(levelname)s: %(message)s")
 
 
 def sleep(entry=None, bed=None, wake=None):
@@ -28,6 +28,9 @@ def sleep(entry=None, bed=None, wake=None):
 
 
 def time_is_in(now, channel):
+    if not channel.up:
+        return False
+
     interval = (int(channel.interval[:-2]),)
     if channel.interval.endswith("mr"):
         interval = np.arange(0, 60, interval[0], dtype=np.uint8)
@@ -56,10 +59,14 @@ def remain(admin, channel):
             step += timedelta(minutes=1)
 
         if rem > 0:
-            date = step.strftime('%A %d %B %H:%M')
-            text = 'پیام های باقیمانده: {0}\nکانال تا {1} تامین خواهد بود'.format(rem, date)
+            date = step.strftime("%A %d %B %H:%M")
+            if channel.up:
+                text = "پیام های باقیمانده: {0}\nکانال تا {1} تامین خواهد بود".format(rem, date)
+            else:
+                text = "پیام های باقیمانده: {0}\nموقتا بات غیر فعال است".format(rem)
+
         else:
-            text = 'هیچ پیامی در صف نیست'
+            text = "هیچ پیامی در صف نیست"
 
         logging.info("remain by {}".format(admin))
         return text
@@ -543,7 +550,7 @@ def start_register(bot, update):
         group_id = text[0]
         name = text[1]
         if group_id.startswith('-') and group_id[1:].isnumeric() and name.startswith('@'):
-            channel = db.Channel(name=name, admin=admin, group_id=int(group_id), plan=3,
+            channel = db.Channel(name=name, admin=admin, group_id=int(group_id), plan=1,
                                  expire=timedelta(days=7))
             db.add(channel)
             bot.send_message(chat_id=chat_id,
@@ -632,7 +639,7 @@ def conversation(updater):
             },
             fallbacks=[CommandHandler(command='cancel',
                                       callback=cancel)],
-            conversation_timeout=timedelta(hours=1)))
+            conversation_timeout=timedelta(minutes=5)))
 
     # status
     updater.dispatcher.add_handler(

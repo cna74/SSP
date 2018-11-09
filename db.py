@@ -11,7 +11,7 @@ Base = declarative_base()
 
 class Channel(Base):
     def __init__(self, name, admin, group_id, plan,
-                 interval='11mr', bed='off', wake='off', logo=False, pos=7,
+                 interval='22mr', bed='off', wake='off', up=True, logo=False, pos=7,
                  register=JDateTime().now().to_datetime(), expire=timedelta):
         # required
         self.name = name
@@ -23,6 +23,7 @@ class Channel(Base):
         self.interval = interval
         self.bed = bed
         self.wake = wake
+        self.up = up
         self.logo = logo
         self.pos = pos
         self.register = register
@@ -43,6 +44,7 @@ class Channel(Base):
     interval = Column(String)
     bed = Column(Integer)
     wake = Column(Integer)
+    up = Column(Boolean)
     logo = Column(Boolean)
     pos = Column(Integer)
     register = Column(DateTime)
@@ -185,6 +187,7 @@ def update(obj):
         row.interval = obj.interval
         row.bed = obj.bed
         row.wake = obj.wake
+        row.up = obj.up
         row.name = obj.name
         row.logo = obj.logo
         row.pos = obj.pos

@@ -34,6 +34,9 @@ class SSP:
 
     @staticmethod
     def time_is_in(now, channel):
+        if not channel.up:
+            return False
+
         interval = (int(channel.interval[:-2]),)
         if channel.interval.endswith("mr"):
             interval = np.arange(0, 60, interval[0], dtype=np.uint8)
@@ -43,6 +46,7 @@ class SSP:
         if (channel.interval[-2] == "m" and now.minute in interval) or \
                 (channel.interval[-2] == "h" and now.hour in interval):
             return True
+
         return False
 
     def save(self, _, update):
@@ -304,10 +308,15 @@ class SSP:
                     dir_ = "image/{}.jpg".format(channel.name)
                     out = "image/{}_out.jpg".format(channel.name)
                     if channel.plan >= 1:
-                        self.robot.getFile(message.file_id).download(dir_)
-                        txt = editor.image_watermark(photo=dir_, out=out, caption=message.txt, channel=channel)
-                        message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
-                                                                  caption=txt).message_id
+                        try:
+                            self.robot.getFile(message.file_id).download(dir_)
+                            txt = editor.image_watermark(photo=dir_, out=out, caption=message.txt, channel=channel)
+                            message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
+                                                                      caption=txt).message_id
+                        except Exception:
+                            txt = editor.id_remove(text=message.txt, channel=channel)
+                            message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id,
+                                                                      caption=txt)
                     else:
                         txt = editor.id_remove(message.txt, channel)
                         message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id,
@@ -427,6 +436,7 @@ class SSP:
             message_id = update.message.message_id
             command = group_id = admin = channel_name = plan = expire = None
             if args:
+                self.robot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING)
                 command = args[0]
                 if command == "add":
                     group_id, admin, channel_name, plan, expire = args[1:]
@@ -464,6 +474,22 @@ class SSP:
         except Exception as E:
             logging.error("admin: {}".format(E))
 
+    def up(self, _, update, args):
+        try:
+            um = update.message
+            channel = db.find("channel", admin=um.from_user.id)
+            if isinstance(channel, db.Channel):
+                if args:
+                    state = dict([("off", False), ("on", True)]).get(args[0], None)
+                    if state is not None:
+                        channel.up = state
+                        db.update(channel)
+                        self.robot.send_message(chat_id=um.chat_id, text=strings.up(state=state))
+                        logging.info("up: channel {} set {}".format(channel.name, args[0]))
+
+        except Exception as E:
+            logging.error("up: {}".format(E))
+
     def send_info(self, _, update):
         try:
             um = update.message
@@ -489,6 +515,7 @@ class SSP:
         conv.conversation(self.updater)
 
         dpa(CommandHandler(command='admin', filters=Filters.user([sina, lili]), callback=self.admin, pass_args=True))
+        dpa(CommandHandler(command='up', filters=Filters.private, callback=self.up, pass_args=True))
         dpa(MessageHandler(filters=Filters.status_update.new_chat_members, callback=self.send_info))
         dpa(MessageHandler(filters=Filters.group, callback=self.save, edited_updates=True))
 
