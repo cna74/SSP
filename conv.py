@@ -553,16 +553,17 @@ def start_register(bot, update):
         group_id = text[0]
         name = text[1]
         if group_id.startswith('-') and group_id[1:].isnumeric() and name.startswith('@'):
-            channel = db.Channel(name=name, admin=admin, group_id=int(group_id), plan=1,
-                                 expire=timedelta(days=7))
+            user = um.from_user.username if um.from_user.username else admin
+
+            channel = db.Channel(name=name, admin=admin, group_id=int(group_id), plan=1, expire=timedelta(days=7))
             db.add(channel)
-            bot.send_message(chat_id=chat_id,
-                             text=strings.start_test_register_true,
-                             reply_to_message_id=message_id)
+            bot.send_message(chat_id=chat_id, text="user {} registered\n\n{}".format(user, channel.__str__()))
+            bot.send_message(chat_id=chat_id, text=strings.start_test_register_true, reply_to_message_id=message_id)
+
             return ConversationHandler.END
         else:
-            bot.send_message(chat_id=chat_id,
-                             text=strings.start_test_register_false)
+            bot.send_message(chat_id=chat_id, text=strings.start_test_register_false)
+
             return start_register
     except Exception as E:
         logging.error("start_register {}".format(E))
