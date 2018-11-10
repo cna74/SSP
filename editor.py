@@ -1,9 +1,7 @@
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip, clips_array
 import moviepy.config as mpy_conf
-import matplotlib.pyplot as plt
 import multiprocessing
 from PIL import Image
-import numpy as np
 import warnings
 import logging
 import re
@@ -14,7 +12,7 @@ mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/u
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
-def id_remove(text, channel, remove_roi=False) -> str:
+def id_remove(text, channel) -> str:
     try:
         pattern_id = re.compile(r'(@\S+)', re.I)
         pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
@@ -44,17 +42,18 @@ def id_remove(text, channel, remove_roi=False) -> str:
         logging.error("id_remove {}".format(E))
 
 
-def logo_by_name(channel, logo_dir=None):
+def logo_by_name(channel, logo_dir=None) -> ImageClip:
     if not logo_dir:
         logo_dir = 'logo/{}.png'.format(channel.name)
 
-    lg1 = TextClip(txt=channel.name, size=(300, 150), stroke_color='white', stroke_width=1)
-    lg2 = TextClip(txt=channel.name, size=(300, 150), stroke_color='black', stroke_width=1)
-    i1 = lg1.get_frame(0)
-    i2 = lg2.get_frame(0)
+    lg1 = TextClip(txt=channel.name, size=(500, 100), color="white", stroke_color='white', stroke_width=1)
+    lg2 = TextClip(txt=channel.name, size=(500, 100), color="grey", stroke_color='grey', stroke_width=1)
+    lg3 = TextClip(txt=channel.name, size=(500, 100), color="black", stroke_color='black', stroke_width=1)
+    lg = clips_array(array=[[lg1],
+                            [lg2],
+                            [lg3]])
 
-    lg = np.append(i1, i2).reshape((300, 300, 3))
-    plt.imsave(fname=logo_dir, arr=lg)
+    lg.save_frame(filename=logo_dir)
 
     return ImageClip(img=logo_dir)
 
