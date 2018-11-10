@@ -497,8 +497,11 @@ def start(bot, update):
         message_id = update.message.message_id
 
         bot.send_message(chat_id=chat_id,
-                         text=strings.start,
-                         reply_to_message_id=message_id,
+                         text=strings.start_1,
+                         reply_to_message_id=message_id)
+
+        bot.send_message(chat_id=chat_id,
+                         text=strings.start_2,
                          reply_markup=InlineKeyboardMarkup(
                              [[Inline('خرید', callback_data="buy")],
                               [Inline('تست (رایگان)', callback_data="test")],
