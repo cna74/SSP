@@ -409,7 +409,7 @@ def set_logo(bot, update):
             keyboard.append([Inline('هیچکدام', callback_data='0;{}'.format(channel.name))])
 
             bot.send_photo(chat_id=chat_id,
-                           reply_to_message_id=um.message_id,
+                           reply_to_message_id=um.message.message_id,
                            photo=open('info.png', 'rb'),
                            caption='خب لوگو تایید شد. محل پیش فرض قرارگیری لوگو رو حالا انتخاب کن\n'
                                    'اگر میخوای بصورت پیش فرض لوگو روی عکس ها و گیف ها گذاشته نشه '
