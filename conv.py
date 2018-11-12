@@ -401,7 +401,7 @@ def set_logo(bot, update):
             chat_id = um.message.chat_id
             channel = db.find('channel', admin=chat_id, name=name)
             editor.logo_by_name(channel)
-            channel.logo = True
+            channel.logo = False
             keyboard = []
             for i in range(1, 10):
                 keyboard.append([Inline(str(i), callback_data="{};{}".format(i, channel.name))])
