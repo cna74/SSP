@@ -44,7 +44,7 @@ def id_remove(text, channel) -> str:
 
 def logo_by_name(channel, logo_dir=None) -> ImageClip:
     if not logo_dir:
-        logo_dir = 'logo/{}.png'.format(channel.name)
+        logo_dir = '../logo/{}.png'.format(channel.name)
 
     lg1 = TextClip(txt=channel.name, size=(500, 100), color="white", stroke_color='white', stroke_width=1)
     lg2 = TextClip(txt=channel.name, size=(500, 100), color="grey", stroke_color='grey', stroke_width=1)
@@ -60,7 +60,7 @@ def logo_by_name(channel, logo_dir=None) -> ImageClip:
 
 def image_watermark(photo, out, caption, channel) -> str:
     try:
-        logo_dir = 'logo/{}.png'.format(channel.name)
+        logo_dir = '../logo/{}.png'.format(channel.name)
         pattern = re.compile(r':\S{,2}:', re.I)
         div = 5
         roi_pt = re.compile(r'\d', re.I)
@@ -73,7 +73,7 @@ def image_watermark(photo, out, caption, channel) -> str:
 
         bg = Image.open(photo)
         if not roi == 0:
-            if not os.path.exists('logo/{}.png'.format(channel.name)):
+            if not os.path.exists('../logo/{}.png'.format(channel.name)):
                 logo_by_name(channel)
 
             lg = Image.open(logo_dir)
@@ -114,7 +114,7 @@ def image_watermark(photo, out, caption, channel) -> str:
 
 def vid_watermark(vid, out, kind, caption, channel) -> str:
     try:
-        logo_dir = "logo/{}.png".format(channel.name)
+        logo_dir = "../logo/{}.png".format(channel.name)
         pattern = re.compile(r':\d:')
         div = 5
         find = int(re.findall(pattern, caption)[0][1:-1]) if re.search(pattern, caption) else channel.pos

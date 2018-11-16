@@ -128,12 +128,25 @@ def add(obj):
         raise Warning('WTF! "{}"'.format(obj.__class__))
 
 
+def delete(obj):
+    if isinstance(obj, Channel):
+        channel = session.query(Channel).filter(Channel.admin == obj.admin, Channel.name == obj.name)
+        if channel:
+            channel.delete()
+
+
 def find(table, **col):
-    if table == 'message':
-        message = session.query(Message).filter(Message.msg_gp_id == col['msg_gp_id'],
-                                                Message.from_group == col['gp_id']).first()
+    if table == "message":
+        message = None
+        if col.get("msg_gp_id") and col.get("gp_id"):
+            message = session.query(Message).filter(Message.msg_gp_id == col["msg_gp_id"],
+                                                    Message.from_group == col["gp_id"]).first()
+        elif col.get("media"):
+            message = session.query(Message).filter(Message.other == col["media"]).all()
+
         return message
-    elif table == 'channel':
+
+    elif table == "channel":
         channel = None
 
         if not col:
@@ -153,7 +166,8 @@ def find(table, **col):
             channel = session.query(Channel).filter(Channel.name == col['name']).first()
 
         return channel
-    elif table == 'member':
+
+    elif table == "member":
         if col.get('admin') and col.get('name'):
             q = session.query(Channel).filter(Channel.name == col['name'],
                                               Channel.admin == col['admin']).first()

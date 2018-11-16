@@ -1,5 +1,6 @@
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
+import numpy as np
 
 admin = "\n➖   ➖   ➖   ➖   ➖   ➖   ➖   ➖\nAdmin: @S_for_Cna\nChannel: @Elite_Manager_ch"
 
@@ -31,11 +32,27 @@ def status(channel, remain):
     return text, keyboard
 
 
+def set_logo_ok(channel,):
+    text = 'خب لوگو تایید شد. محل پیش فرض قرارگیری لوگو رو حالا انتخاب کن\n' \
+              'اگر میخوای بصورت پیش فرض لوگو روی عکس ها و گیف ها گذاشته نشه "هیچکدام" رو انتخاب کن\n' + admin
+
+    keyboard = []
+    for i in range(1, 10):
+        keyboard.append([Inline(str(i), callback_data="{};{}".format(i, channel.name))])
+
+    keyboard = np.array(keyboard).reshape((3, 3)).tolist()
+    keyboard.append([Inline('هیچکدام', callback_data='0;{}'.format(channel.name))])
+
+    keyboard = InlineKeyboardMarkup(keyboard)
+
+    return text, keyboard
+
+
 def up(state):
     if state:
-        return "بات روشن شد"+admin
+        return "بات روشن شد" + admin
     else:
-        return "بات خاموش شد، ولی همچنان پیام های گروه را ذخیره میکند"+admin
+        return "بات خاموش شد، ولی همچنان پیام های گروه را ذخیره میکند" + admin
 
 
 start_1 = """سلام 🤓✋🏻
@@ -91,6 +108,12 @@ admin_hint = "برای اضافه کردن کانال جدید\n" \
              "برای تمدید کانال\n" \
              "/admin ren <ch_name> <days>\n\n" \
              "برای تغییر طرح \n" \
-             "/admin plan <ch_name> <plan>"
+             "/admin plan <ch_name> <plan>\n\n" \
+             "برای تغییر نام کانال\n" \
+             "/admin edit <ch_name> <new_ch_name>\n\n" \
+             "لیست کانال ها\n" \
+             "/admin lst\n\n" \
+             "برای حدف کانال\n" \
+             "/admin del <ch_name>\n\n" \
 
-congrats = "تبریک، بات با موفقیت در گروه ثبت شد"+admin
+congrats = "تبریک، بات با موفقیت در گروه ثبت شد" + admin

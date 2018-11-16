@@ -1,80 +1,20 @@
-from telegram.ext import ConversationHandler, CallbackQueryHandler, MessageHandler, CommandHandler, Updater, Filters
+from telegram.ext import ConversationHandler, CallbackQueryHandler, MessageHandler, CommandHandler, Filters
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import timedelta, JalaliDatetime
+from utils import editor, strings, db, util
 import numpy as np
 import matplotlib
 import logging
-import strings
-import editor
-import db
 import os
 
 matplotlib.use("AGG", force=True)
 import matplotlib.pyplot as plt
 
-logging.basicConfig(filename="report.log", level=logging.INFO, format="%(asctime)s: %(levelname)s: %(message)s")
+logging.basicConfig(filename="report.log", level=logging.INFO,
+                    format="%(asctime)s: %(levelname)s: %(message)s")
 
 
-def sleep(entry=None, bed=None, wake=None):
-    entry = JalaliDatetime().now().strftime('%H%M') if not entry else entry.strftime('%H%M')
-
-    if "off" in (bed, wake):
-        return False
-
-    if entry >= bed > wake < entry or entry >= bed < wake > entry:
-        return True
-
-    return False
-
-
-def time_is_in(now, channel):
-    if not channel.up:
-        return False
-
-    interval = (int(channel.interval[:-2]),)
-    if channel.interval.endswith("mr"):
-        interval = np.arange(0, 60, interval[0], dtype=np.uint8)
-    elif channel.interval.endswith("hr"):
-        interval = np.arange(0, 24, interval[0], dtype=np.uint8)
-
-    if (channel.interval[-2] == "m" and now.minute in interval) or \
-            (channel.interval[-2] == "h" and now.hour in interval):
-        return True
-
-    return False
-
-
-def remain(admin, channel):
-    try:
-        remaining = db.remain(channel)
-        step = JalaliDatetime().now()
-        rem = remaining
-
-        while remaining > 0:
-            if sleep(step, bed=channel.bed, wake=channel.wake):
-                step += timedelta(hours=channel.wake / 10000 - step.hour)
-
-            if time_is_in(now=step, channel=channel):
-                remaining -= 1
-            step += timedelta(minutes=1)
-
-        if rem > 0:
-            date = step.strftime("%A %d %B %H:%M")
-            if channel.up:
-                text = "پیام های باقیمانده: {0}\nکانال تا {1} تامین خواهد بود".format(rem, date)
-            else:
-                text = "پیام های باقیمانده: {0}\nموقتا بات غیر فعال است".format(rem)
-
-        else:
-            text = "هیچ پیامی در صف نیست"
-
-        logging.info("remain by {}".format(admin))
-        return text
-    except Exception as E:
-        logging.error("Could't get remaining time by {} Error: {}".format(admin, E))
-
-
-# region status
+# region setting
 def status(bot, update):
     try:
         um = update.message
@@ -85,7 +25,8 @@ def status(bot, update):
                 channel = channels
                 chat_id = um.chat_id
                 message_id = um.message_id
-                text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+
+                text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
                 bot.send_message(chat_id=chat_id,
                                  text=text,
                                  reply_to_message_id=message_id,
@@ -115,14 +56,14 @@ def setting(bot, update):
                 channel = db.find('channel', name=name)
             chat_id = update.callback_query.message.chat_id
             message_id = update.callback_query.message.message_id
-            text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
             bot.edit_message_text(chat_id=chat_id, text=text, message_id=message_id, reply_markup=keyboard)
             return select
         else:
             um = update.message
             admin = um.from_user
             channel = db.find('channel', admin=admin)
-            text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
             bot.send_message(chat_id=admin.id, text=text, reply_markup=keyboard)
             return select
     except Exception as E:
@@ -288,7 +229,7 @@ def step2(bot, update):
             return done
         elif interval == "setting":
             channel = db.find("channel", name=ch_name)
-            text, keyboard = strings.status(channel=channel, remain=remain(admin=admin, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
             bot.edit_message_text(chat_id=admin, text=text, message_id=message_id, reply_markup=keyboard)
             return select
 
@@ -323,7 +264,7 @@ def done(bot, update):
                 channel.wake = part1
                 db.update(channel)
 
-            text, keyboard = strings.status(channel=channel, remain=remain(admin=chat_id, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=chat_id, channel=channel))
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=keyboard)
             return select
 
@@ -331,7 +272,7 @@ def done(bot, update):
         logging.error("done {}".format(E))
 
 
-def graph(self, _, update):
+def graph(bot, update):
     try:
         if update.callback_query:
             um = update.callback_query
@@ -349,12 +290,12 @@ def graph(self, _, update):
 
             y = out[:, 0]
             if len(out) < 3:
-                self.robot.edit_message_text(chat_id=admin,
-                                             message_id=um.message.message_id,
-                                             text="حداقل باید سه روز از ثبت نام گذشته باشد")
+                bot.edit_message_text(chat_id=admin,
+                                      message_id=um.message.message_id,
+                                      text="حداقل باید سه روز از ثبت نام گذشته باشد")
                 return ConversationHandler.END
 
-            y = np.append(y, self.robot.get_chat_members_count(ch_name))
+            y = np.append(y, bot.get_chat_members_count(ch_name))
             x = np.arange(len(y), dtype=int)
 
             plt.plot(x, y, marker='o', label='now', color='red', markersize=4)
@@ -379,14 +320,14 @@ def graph(self, _, update):
             now = JalaliDatetime().from_date(now)
             til = now + timedelta(days=days)
 
-            self.robot.send_photo(chat_id=um.message.chat_id,
-                                  photo=open(save_in, 'rb'),
-                                  caption="از {} تا {} در {} روز\n" \
-                                          " کمترین میزان تعداد اعضا 🔻 {}\n" \
-                                          " بیشترین تعداد اعضا🔺 {}\n" \
-                                          " میانگین سرعت عضو شدن اعضا در روز {}\n" \
-                                          "پیش بینی برای {} روز آینده برابر {}".format(
-                                      days, til, now, y.min(), y.max(), diff, prediction, domain))
+            bot.send_photo(chat_id=um.message.chat_id,
+                           photo=open(save_in, 'rb'),
+                           caption="از {} تا {} در {} روز\n" \
+                                   " کمترین میزان تعداد اعضا 🔻 {}\n" \
+                                   " بیشترین تعداد اعضا🔺 {}\n" \
+                                   " میانگین سرعت عضو شدن اعضا در روز {}\n" \
+                                   "پیش بینی برای {} روز آینده برابر {}".format(
+                               days, til, now, y.min(), y.max(), diff, prediction, domain))
             os.remove(save_in)
             return ConversationHandler.END
     except Exception as E:
@@ -402,23 +343,17 @@ def set_logo(bot, update):
             channel = db.find('channel', admin=chat_id, name=name)
             editor.logo_by_name(channel)
             channel.logo = False
-            keyboard = []
-            for i in range(1, 10):
-                keyboard.append([Inline(str(i), callback_data="{};{}".format(i, channel.name))])
-            keyboard = np.array(keyboard).reshape((3, 3)).tolist()
-            keyboard.append([Inline('هیچکدام', callback_data='0;{}'.format(channel.name))])
 
+            text, keyboard = strings.set_logo_ok(channel=channel)
             bot.send_photo(chat_id=chat_id,
                            reply_to_message_id=um.message.message_id,
                            photo=open('info.png', 'rb'),
-                           caption='خب لوگو تایید شد. محل پیش فرض قرارگیری لوگو رو حالا انتخاب کن\n'
-                                   'اگر میخوای بصورت پیش فرض لوگو روی عکس ها و گیف ها گذاشته نشه '
-                                   '"هیچکدام" رو انتخاب کن\n'
-                                   'پشتیبانی\n'
-                                   '@s_for_cna',
-                           reply_markup=InlineKeyboardMarkup(keyboard))
+                           caption=text,
+                           reply_markup=keyboard)
             return set_pos
 
+        elif update.message.sticker:
+            print(update.message.sticker)
         elif update.message.document:
             um = update.message
             chat_id = um.chat_id
@@ -436,21 +371,12 @@ def set_logo(bot, update):
                 channel.logo = True
                 db.update(channel)
 
-                keyboard = []
-                for i in range(1, 10):
-                    keyboard.append([Inline(str(i), callback_data="{};{}".format(i, channel.name))])
-                keyboard = np.array(keyboard).reshape((3, 3)).tolist()
-                keyboard.append([Inline('هیچکدام', callback_data='0;{}'.format(channel.name))])
-
+                text, keyboard = strings.set_logo_ok(channel=channel)
                 bot.send_photo(chat_id=chat_id,
                                reply_to_message_id=um.message_id,
                                photo=open('info.png', 'rb'),
-                               caption='خب لوگو تایید شد. محل پیش فرض قرارگیری لوگو رو حالا انتخاب کن\n'
-                                       'اگر میخوای بصورت پیش فرض لوگو روی عکس ها و گیف ها گذاشته نشه '
-                                       '"هیچکدام" رو انتخاب کن\n'
-                                       'پشتیبانی\n'
-                                       '@s_for_cna',
-                               reply_markup=InlineKeyboardMarkup(keyboard))
+                               caption=text,
+                               reply_markup=keyboard)
                 return set_pos
 
             elif isinstance(res, list):
@@ -645,10 +571,10 @@ def conversation(updater):
                                       callback=cancel)],
             conversation_timeout=timedelta(minutes=5)))
 
-    # status
+    # setting
     updater.dispatcher.add_handler(
         ConversationHandler(
-            entry_points=[CommandHandler(command='status',
+            entry_points=[CommandHandler(command='setting',
                                          callback=status,
                                          filters=Filters.private)],
             states={
