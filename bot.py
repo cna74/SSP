@@ -42,141 +42,141 @@ class SSP:
                 msg_gp_id = ue.message_id
                 channel = db.find('channel', group_id=from_gp)
                 message = db.find(table='message', msg_gp_id=msg_gp_id, gp_id=from_gp)
+                if isinstance(message, db.Message):
+                    if ue.reply_to_message:
+                        if ue.text:
+                            message = db.find("message",
+                                              msg_gp_id=ue.reply_to_message.message_id,
+                                              gp_id=ue.chat_id)
+                            if isinstance(message, db.Message):
+                                if message.other.isnumeric():
+                                    message = db.find("message", media=message.other)
+                                    for msg in message:
+                                        msg.txt = ue.text
+                                        db.update(msg)
+                                else:
+                                    message.txt = ue.text
+                                    db.update(message)
 
-                if ue.reply_to_message:
-                    if ue.text:
-                        message = db.find("message",
-                                          msg_gp_id=ue.reply_to_message.message_id,
-                                          gp_id=ue.chat_id)
-                        if isinstance(message, db.Message):
-                            if message.other.isnumeric():
-                                message = db.find("message", media=message.other)
-                                for msg in message:
-                                    msg.txt = ue.text
-                                    db.update(msg)
+                    # after sent
+                    elif ue.text and message.sent:
+                        message.txt = editor.id_remove(text=ue.text, channel=channel)
+                        if len(um.entities) > 0:
+                            entities = um.entities
+                            url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
+                            message.txt += '\n<a href="{}">​​​​​​​​​​​</a>'.format(url)
+                            message.other = 'url'
+                        parse_mode = 'HTML' if message.other == 'url' else None
+                        self.robot.edit_message_text(chat_id=message.to_channel, message_id=message.msg_ch_id,
+                                                     text=message.txt,
+                                                     parse_mode=parse_mode)
+                        message.sent = message.ch_a = True
+                    elif message.sent:
+                        media = out = None
+                        text = ue.caption if ue.caption else ' '
+                        text = editor.id_remove(text=text, channel=channel)
+
+                        if ue.photo:
+                            media = ue.photo[-1].file_id
+                            dir_ = "image/{}.jpg".format(channel.name)
+                            out = 'image/{}_out.jpg'.format(channel.name)
+                            self.robot.getFile(media).download(dir_)
+
+                            message.kind = "photo"
+                            if channel.plan >= 1:
+                                text = editor.image_watermark(photo=dir_, out=out, caption=text, channel=channel)
+                                media = telegram.InputMediaPhoto(media=open(out, 'rb'), caption=text)
                             else:
-                                message.txt = ue.text
-                                db.update(message)
+                                text = editor.id_remove(text=text, channel=channel)
+                                media = telegram.InputMediaPhoto(media=media, caption=text)
 
-                # after sent
-                elif ue.text and message.sent:
-                    message.txt = editor.id_remove(text=ue.text, channel=channel)
-                    if len(um.entities) > 0:
-                        entities = um.entities
-                        url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
-                        message.txt += '\n<a href="{}">​​​​​​​​​​​</a>'.format(url)
-                        message.other = 'url'
-                    parse_mode = 'HTML' if message.other == 'url' else None
-                    self.robot.edit_message_text(chat_id=message.to_channel, message_id=message.msg_ch_id,
-                                                 text=message.txt,
-                                                 parse_mode=parse_mode)
-                    message.sent = message.ch_a = True
-                elif message.sent:
-                    media = out = None
-                    text = ue.caption if ue.caption else ' '
-                    text = editor.id_remove(text=text, channel=channel)
+                        elif ue.animation:
+                            media = ue.animation.file_id
+                            mime = str(um.animation.mime_type).split('/')[1]
+                            dir_ = "gif/{}.{}".format(channel.name, mime)
+                            out = "gif/{}_out.mp4".format(channel.name)
+                            size = ue.video.file_size / (1024 ** 2)
 
-                    if ue.photo:
-                        media = ue.photo[-1].file_id
-                        dir_ = "image/{}.jpg".format(channel.name)
-                        out = 'image/{}_out.jpg'.format(channel.name)
-                        self.robot.getFile(media).download(dir_)
+                            message.mime = mime
+                            message.kind = 'animation'
 
-                        message.kind = "photo"
-                        if channel.plan >= 1:
-                            text = editor.image_watermark(photo=dir_, out=out, caption=text, channel=channel)
-                            media = telegram.InputMediaPhoto(media=open(out, 'rb'), caption=text)
-                        else:
-                            text = editor.id_remove(text=text, channel=channel)
-                            media = telegram.InputMediaPhoto(media=media, caption=text)
+                            if size <= limit_size and channel.plan >= 2:
+                                self.robot.getFile(media).download(dir_)
+                                text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
+                                                            caption=text, channel=channel)
+                                media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
+                            else:
+                                text = editor.id_remove(text=text, channel=channel)
+                                media = telegram.InputMediaAnimation(media=media, caption=text)
 
-                    elif ue.animation:
-                        media = ue.animation.file_id
-                        mime = str(um.animation.mime_type).split('/')[1]
-                        dir_ = "gif/{}.{}".format(channel.name, mime)
-                        out = "gif/{}_out.mp4".format(channel.name)
-                        size = ue.video.file_size / (1024 ** 2)
+                        elif ue.video:
+                            media = ue.video.file_id
+                            mime = str(um.video.mime_type).split('/')[1]
+                            dir_ = "vid/{}.{}".format(channel.name, mime)
+                            out = 'vid/{}_out.mp4'.format(channel.name)
+                            size = ue.video.file_size / (1024 ** 2)
 
-                        message.mime = mime
-                        message.kind = 'animation'
+                            message.mime = mime
+                            message.kind = 'video'
 
-                        if size <= limit_size and channel.plan >= 2:
-                            self.robot.getFile(media).download(dir_)
-                            text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
-                                                        caption=text, channel=channel)
-                            media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
-                        else:
-                            text = editor.id_remove(text=text, channel=channel)
-                            media = telegram.InputMediaAnimation(media=media, caption=text)
+                            if size < limit_size and channel.plan >= 3:
+                                self.robot.getFile(media).download(dir_)
+                                text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
+                                                            caption=text, channel=channel)
+                                media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
+                            else:
+                                text = editor.id_remove(text=text, channel=channel)
+                                media = telegram.InputMediaVideo(media=media, caption=text)
 
-                    elif ue.video:
-                        media = ue.video.file_id
-                        mime = str(um.video.mime_type).split('/')[1]
-                        dir_ = "vid/{}.{}".format(channel.name, mime)
-                        out = 'vid/{}_out.mp4'.format(channel.name)
-                        size = ue.video.file_size / (1024 ** 2)
+                        elif ue.document:
+                            media = ue.document.file_id
+                            media = telegram.InputMediaDocument(media=media, caption=text)
 
-                        message.mime = mime
-                        message.kind = 'video'
+                        elif ue.audio:
+                            media = ue.audio.file_id
+                            media = telegram.InputMediaAudio(media=media, caption=text)
 
-                        if size < limit_size and channel.plan >= 3:
-                            self.robot.getFile(media).download(dir_)
-                            text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
-                                                        caption=text, channel=channel)
-                            media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
-                        else:
-                            text = editor.id_remove(text=text, channel=channel)
-                            media = telegram.InputMediaVideo(media=media, caption=text)
+                        if media:
+                            self.robot.edit_message_media(media=media, chat_id=message.to_channel,
+                                                          message_id=message.msg_ch_id)
 
-                    elif ue.document:
-                        media = ue.document.file_id
-                        media = telegram.InputMediaDocument(media=media, caption=text)
+                        if out:
+                            os.remove(out)
+                        if ue.caption:
+                            self.robot.edit_message_caption(chat_id=message.to_channel, message_id=message.msg_ch_id,
+                                                            caption=text)
 
-                    elif ue.audio:
-                        media = ue.audio.file_id
-                        media = telegram.InputMediaAudio(media=media, caption=text)
+                        message.sent = message.ch_a = True
+                        message.txt = text
 
-                    if media:
-                        self.robot.edit_message_media(media=media, chat_id=message.to_channel,
-                                                      message_id=message.msg_ch_id)
-
-                    if out:
-                        os.remove(out)
-                    if ue.caption:
-                        self.robot.edit_message_caption(chat_id=message.to_channel, message_id=message.msg_ch_id,
-                                                        caption=text)
-
-                    message.sent = message.ch_a = True
-                    message.txt = text
-
-                # before sent
-                elif ue.text:
-                    message.txt = ue.text
-                    message.sent = message.ch_a = False
-                    if len(um.entities) > 0:
-                        entities = um.entities
-                        url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
-                        message.txt += '\n<a href="{}">​​​​​​​​​​​</a>'.format(url)
-                        message.other = 'url'
-                elif ue.caption:
-                    message.txt = ue.caption if ue.caption else " "
-                    message.sent = message.ch_a = False
-                    if ue.photo:
-                        message.kind = 'photo'
-                        message.file_id = ue.photo[-1].file_id
-                    elif ue.video:
-                        message.kind = 'video'
-                        message.file_id = ue.video.file_id
-                    elif ue.animation:
-                        message.kind = 'animation'
-                        message.file_id = ue.animation.file_id
-                    elif ue.document:
-                        message.kind = 'document'
-                        message.file_id = ue.document.file_id
-                    elif ue.audio:
-                        message.kind = 'audio'
-                        message.file_id = ue.audio.file_id
-                db.update(message)
+                    # before sent
+                    elif ue.text:
+                        message.txt = ue.text
+                        message.sent = message.ch_a = False
+                        if len(um.entities) > 0:
+                            entities = um.entities
+                            url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
+                            message.txt += '\n<a href="{}">​​​​​​​​​​​</a>'.format(url)
+                            message.other = 'url'
+                    elif ue.caption:
+                        message.txt = ue.caption if ue.caption else " "
+                        message.sent = message.ch_a = False
+                        if ue.photo:
+                            message.kind = 'photo'
+                            message.file_id = ue.photo[-1].file_id
+                        elif ue.video:
+                            message.kind = 'video'
+                            message.file_id = ue.video.file_id
+                        elif ue.animation:
+                            message.kind = 'animation'
+                            message.file_id = ue.animation.file_id
+                        elif ue.document:
+                            message.kind = 'document'
+                            message.file_id = ue.document.file_id
+                        elif ue.audio:
+                            message.kind = 'audio'
+                            message.file_id = ue.audio.file_id
+                    db.update(message)
 
             # regular
             elif um:
