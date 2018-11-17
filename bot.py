@@ -48,14 +48,15 @@ class SSP:
                         message = db.find("message",
                                           msg_gp_id=ue.reply_to_message.message_id,
                                           gp_id=ue.chat_id)
-                        if message.other.isnumeric():
-                            message = db.find("message", media=message.other)
-                            for msg in message:
-                                msg.txt = ue.text
-                                db.update(msg)
-                        else:
-                            message.txt = ue.text
-                            db.update(message)
+                        if isinstance(message, db.Message):
+                            if message.other.isnumeric():
+                                message = db.find("message", media=message.other)
+                                for msg in message:
+                                    msg.txt = ue.text
+                                    db.update(msg)
+                            else:
+                                message.txt = ue.text
+                                db.update(message)
 
                 # after sent
                 elif ue.text and message.sent:
@@ -179,7 +180,7 @@ class SSP:
 
             # regular
             elif um:
-                channel = db.find(table='channel', group_id=um.chat_id)
+                channel = db.find(table="channel", group_id=um.chat_id)
                 if um.reply_to_message:
                     if um.text:
                         message = db.find("message",
