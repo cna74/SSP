@@ -13,8 +13,7 @@ warnings.simplefilter("ignore", category=Warning)
 
 sina, lili = 103086461, 303962908
 limit_size = 1
-logging.basicConfig(filename='report.log',
-                    level=logging.INFO,
+logging.basicConfig(filename='report.log', level=logging.INFO,
                     format='%(asctime)s: %(name)s: %(levelname)s: %(message)s')
 logging.disable(logging.WARNING)
 
@@ -45,7 +44,7 @@ class SSP:
                 message = db.find(table='message', msg_gp_id=msg_gp_id, gp_id=from_gp)
 
                 if ue.reply_to_message:
-                    if ue.text.startswith(". "):
+                    if ue.text:
                         message = db.find("message",
                                           msg_gp_id=ue.reply_to_message.message_id,
                                           gp_id=ue.chat_id)
