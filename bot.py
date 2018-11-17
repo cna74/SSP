@@ -15,7 +15,8 @@ sina, lili = 103086461, 303962908
 limit_size = 1
 logging.basicConfig(filename='report.log',
                     level=logging.INFO,
-                    format='%(asctime)s: %(levelname)s: %(message)s')
+                    format='%(asctime)s: %(name)s: %(levelname)s: %(message)s')
+logging.disable(logging.WARNING)
 
 
 # noinspection PyBroadException
@@ -51,17 +52,11 @@ class SSP:
                         if message.other.isnumeric():
                             message = db.find("message", media=message.other)
                             for msg in message:
-                                msg.txt = ". " + msg.txt
+                                msg.txt = ue.text
                                 db.update(msg)
                         else:
-                            message.txt = ". " + message.txt
+                            message.txt = ue.text
                             db.update(message)
-                    elif ue.text.startswith(":") and len(ue.text) == 3 and ue.text[1].isnumeric():
-                        message = db.find("message",
-                                          msg_gp_id=ue.reply_to_message.message_id,
-                                          gp_id=ue.chat_id)
-                        message.txt = ue.text + message.txt
-                        db.update(message)
 
                 # after sent
                 elif ue.text and message.sent:
@@ -187,24 +182,18 @@ class SSP:
             elif um:
                 channel = db.find(table='channel', group_id=um.chat_id)
                 if um.reply_to_message:
-                    if um.text.startswith(". "):
+                    if um.text:
                         message = db.find("message",
                                           msg_gp_id=um.reply_to_message.message_id,
                                           gp_id=um.chat_id)
                         if message.other.isnumeric():
                             message = db.find("message", media=message.other)
                             for msg in message:
-                                msg.txt = ". " + msg.txt
+                                msg.txt = um.text
                                 db.update(msg)
                         else:
-                            message.txt = ". " + message.txt
+                            message.txt = um.text
                             db.update(message)
-                    elif um.text.startswith(":") and len(um.text) == 3 and um.text[1].isnumeric():
-                        message = db.find("message",
-                                          msg_gp_id=um.reply_to_message.message_id,
-                                          gp_id=um.chat_id)
-                        message.txt = um.text + message.txt
-                        db.update(message)
 
                 elif um.text:
                     other = ""
@@ -524,6 +513,9 @@ class SSP:
                     if channel:
                         channel.name = n_channel_name
                         db.update(channel)
+                        self.robot.send_message(chat_id=chat_id,
+                                                reply_to_message_id=message_id,
+                                                text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "lst":
                     channels = db.find('channel')
                     text = ""
@@ -560,7 +552,7 @@ class SSP:
                 channel = db.find("channel", admin=admin, name=name)
 
             if isinstance(channel, db.Channel):
-                text, _ = strings.status(channel, util.remain(admin, channel))
+                text, _ = strings.status(channel, util.remain(channel=channel))
                 self.robot.send_message(chat_id=admin, text=text,
                                         reply_to_message_id=update.message.message_id)
                 logging.info("state : {}".format(channel.name))
@@ -604,32 +596,49 @@ class SSP:
         except Exception as E:
             logging.error("set: {}".format(E))
 
+    def error_callback(self, _, __, error):
+        try:
+            if isinstance(error, telegram.error.NetworkError):
+                self.updater.stop()
+                logging.error(error)
+                exit()
+            else:
+                logging.error(error)
+        except BaseException as E:
+            logging.error("TelegramError {}".format(E))
+
     def run(self):
-        dpa = self.updater.dispatcher.add_handler
-        job = self.updater.job_queue
-        self.updater.start_polling()
+        try:
+            dpa = self.updater.dispatcher.add_handler
+            job = self.updater.job_queue
+            self.updater.start_polling()
+            self.updater.dispatcher.add_error_handler(self.error_callback)
 
-        # region conversations
+            # region conversations
 
-        # start
-        # setting
-        # delay
-        # endregion
-        conv.conversation(self.updater)
+            # start
+            # setting
+            # delay
+            # endregion
+            conv.conversation(self.updater)
 
-        dpa(CommandHandler(command="admin", filters=Filters.user([sina, lili]), callback=self.admin, pass_args=True))
+            dpa(CommandHandler(command="admin", filters=Filters.user([sina, lili]), callback=self.admin, pass_args=True))
 
-        dpa(CommandHandler(command="state", filters=Filters.private, callback=self.state, pass_args=True))
-        dpa(CommandHandler(command="set", filters=Filters.private, callback=self.set, pass_args=True))
+            dpa(CommandHandler(command="state", filters=Filters.private, callback=self.state, pass_args=True))
+            dpa(CommandHandler(command="set", filters=Filters.private, callback=self.set, pass_args=True))
 
-        dpa(MessageHandler(filters=Filters.status_update.new_chat_members, callback=self.send_info))
-        dpa(MessageHandler(filters=Filters.group, callback=self.save, edited_updates=True))
+            dpa(MessageHandler(filters=Filters.status_update.new_chat_members, callback=self.send_info))
+            dpa(MessageHandler(filters=Filters.group, callback=self.save, edited_updates=True))
 
-        first = 60 - JalaliDatetime().now().second
-        job.run_repeating(callback=self.task, interval=60, first=first)
+            first = 60 - JalaliDatetime().now().second
+            job.run_repeating(callback=self.task, interval=60, first=first)
 
-        print("{}".format(self.robot.name))
-        self.updater.idle()
+            print("{}".format(self.robot.name))
+            self.updater.idle()
+        except telegram.error.NetworkError as E:
+            self.updater.stop()
+            logging.error("NETWORK ERROR !!! {}".format(E))
+            exit()
 
 
 timer = SSP(var.TOKEN)

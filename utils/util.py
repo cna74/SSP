@@ -1,10 +1,6 @@
 from khayyam3.tehran_timezone import JalaliDatetime, timedelta
 from utils import db
 import numpy as np
-import logging
-
-logging.basicConfig(filename="report.log", level=logging.INFO,
-                    format="%(asctime)s: %(levelname)s: %(message)s")
 
 
 def sleep(entry=None, bed=None, wake=None):
@@ -36,31 +32,28 @@ def time_is_in(now, channel):
     return False
 
 
-def remain(admin, channel):
-    try:
-        remaining = db.remain(channel)
-        step = JalaliDatetime().now()
-        rem = remaining
+def remain(channel):
+    remaining = db.remain(channel)
+    step = JalaliDatetime().now()
+    rem = remaining
 
+    if channel.up:
+        while remaining > 0:
+            if sleep(step, bed=channel.bed, wake=channel.wake):
+                step += timedelta(hours=channel.wake / 10000 - step.hour)
+
+            if time_is_in(now=step, channel=channel):
+                remaining -= 1
+            step += timedelta(minutes=1)
+
+    if rem > 0 :
+        date = step.strftime("%A %d %B %H:%M")
         if channel.up:
-            while remaining > 0:
-                if sleep(step, bed=channel.bed, wake=channel.wake):
-                    step += timedelta(hours=channel.wake / 10000 - step.hour)
-
-                if time_is_in(now=step, channel=channel):
-                    remaining -= 1
-                step += timedelta(minutes=1)
-
-        if rem > 0 :
-            date = step.strftime("%A %d %B %H:%M")
-            if channel.up:
-                text = "پیام های باقیمانده: {0}\nکانال تا {1} تامین خواهد بود".format(rem, date)
-            else:
-                text = "پیام های باقیمانده: {0}\nموقتا بات غیر فعال است".format(rem)
-
+            text = "پیام های باقیمانده: {0}\nکانال تا {1} تامین خواهد بود".format(rem, date)
         else:
-            text = "هیچ پیامی در صف نیست"
+            text = "پیام های باقیمانده: {0}\nموقتا بات غیر فعال است".format(rem)
 
-        return text
-    except Exception as E:
-        logging.error("Could't get remaining time by {} Error: {}".format(admin, E))
+    else:
+        text = "هیچ پیامی در صف نیست"
+
+    return text

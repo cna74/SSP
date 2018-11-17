@@ -10,9 +10,6 @@ import os
 matplotlib.use("AGG", force=True)
 import matplotlib.pyplot as plt
 
-logging.basicConfig(filename="report.log", level=logging.INFO,
-                    format="%(asctime)s: %(levelname)s: %(message)s")
-
 
 # region setting
 def status(bot, update):
@@ -26,7 +23,7 @@ def status(bot, update):
                 chat_id = um.chat_id
                 message_id = um.message_id
 
-                text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
+                text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
                 bot.send_message(chat_id=chat_id,
                                  text=text,
                                  reply_to_message_id=message_id,
@@ -56,14 +53,14 @@ def setting(bot, update):
                 channel = db.find('channel', name=name)
             chat_id = update.callback_query.message.chat_id
             message_id = update.callback_query.message.message_id
-            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
             bot.edit_message_text(chat_id=chat_id, text=text, message_id=message_id, reply_markup=keyboard)
             return select
         else:
             um = update.message
             admin = um.from_user
             channel = db.find('channel', admin=admin)
-            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
             bot.send_message(chat_id=admin.id, text=text, reply_markup=keyboard)
             return select
     except Exception as E:
@@ -229,7 +226,7 @@ def step2(bot, update):
             return done
         elif interval == "setting":
             channel = db.find("channel", name=ch_name)
-            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=admin, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
             bot.edit_message_text(chat_id=admin, text=text, message_id=message_id, reply_markup=keyboard)
             return select
 
@@ -264,7 +261,7 @@ def done(bot, update):
                 channel.wake = part1
                 db.update(channel)
 
-            text, keyboard = strings.status(channel=channel, remain=util.remain(admin=chat_id, channel=channel))
+            text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
             bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=keyboard)
             return select
 
