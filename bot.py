@@ -322,7 +322,7 @@ class SSP:
                             self.robot.getFile(message.file_id).download(dir_)
                             txt = editor.image_watermark(photo=dir_, out=out, caption=message.txt, channel=channel)
                             message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
-                                                                      caption=txt).message_id
+                                                                      caption=txt, timeout=time_out).message_id
                         except Exception:
                             txt = editor.id_remove(text=message.txt, channel=channel)
                             message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id,
@@ -347,7 +347,7 @@ class SSP:
                                                                       video=open(out, 'rb'),
                                                                       caption=txt,
                                                                       timeout=time_out).message_id
-                        except Exception as _:
+                        except Exception:
                             message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
                                                                       video=message.file_id,
                                                                       caption=txt).message_id
@@ -536,7 +536,10 @@ class SSP:
                     if isinstance(channel, db.Channel):
                         self.robot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
                                                 text=strings.status(channel, util.remain(channel), button=False))
-
+                elif command == "db":
+                    # db
+                    self.robot.send_document(chat_id=cna, document=open("bot_db.db", "rb"),
+                                             timeout=time_out)
                 else:
                     self.robot.send_message(chat_id=chat_id,
                                             reply_to_message_id=message_id,
