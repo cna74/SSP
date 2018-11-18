@@ -15,23 +15,25 @@ logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime
 def id_remove(text, channel) -> str:
     try:
         pattern_id = re.compile(r'(@\S+)', re.I)
-        pattern1 = re.compile(r'(:\S{1,2}:)', re.I)
-        pattern2 = re.compile(r'https://t\.me\S*')
+        pattern_pos = re.compile(r'(:\S{1,2}:)', re.I)
+        pattern_link = re.compile(r'https://t\.me\S*')
 
-        if re.search(pattern2, text):
-            link = re.findall(pattern2, text)
+        if re.search(pattern_link, text):
+            link = re.findall(pattern_link, text)
             for i in link:
                 text = text.replace(i, '')
-        if re.search(pattern1, text):
-            logo = re.findall(pattern1, text)[0]
-            text = re.sub(pattern1, '', text)
+
+        if re.search(pattern_pos, text):
+            logo = re.findall(pattern_pos, text)[0]
+            text = re.sub(pattern_pos, '', text)
             text = logo + text
+
         if re.search(pattern_id, text):
-            state = re.findall(pattern_id, text)
-            for state in state:
-                if state.lower() not in (channel.name,):
-                    text = re.sub(state, channel.name, text)
-            if text.lower().strip()[len(channel.name) * (-5):].find(channel.name) == -1:
+            ids = re.findall(pattern_id, text)
+            for id_ in ids:
+                if not id_.lower() == channel.name:
+                    text = re.sub(id_, channel.name, text)
+            if not text.lower().strip().endswith(channel.name):
                 text += '\n' + channel.name
         else:
             text += '\n' + channel.name

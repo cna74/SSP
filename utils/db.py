@@ -181,17 +181,11 @@ def find(table, **col):
 
 def update(obj):
     if isinstance(obj, Message):
-        print(1)
         row = session.query(Message).get(obj.id)
-        print(2)
         row.txt = obj.txt
-        print(3)
         row.msg_ch_id = obj.msg_ch_id
-        print(4)
         row.sent = obj.sent
-        print(5)
         row.ch_a = obj.ch_a
-        print(6)
 
         if obj.kind == 'photo':
             row.file_id = obj.file_id
@@ -199,10 +193,8 @@ def update(obj):
             row.file_id = obj.file_id
         elif obj.kind == "animation":
             row.file_id = obj.file_id
-        print(7)
 
         session.commit()
-        print(8)
 
     elif isinstance(obj, Channel):
         row = session.query(Channel).filter(Channel.name == obj.name).first()
