@@ -437,7 +437,7 @@ class SSP:
                 self.robot.send_document(document=open('bot_db.db', 'rb'),
                                          caption=now.strftime("%x"),
                                          chat_id=cna)
-                text = "channel\texpire_date"
+                text = "channel\texpire_date\n"
                 for ch in channels:
                     expire = JalaliDatetime().from_date(ch.expire)
                     now = JalaliDatetime().now()
@@ -518,7 +518,7 @@ class SSP:
                                                 text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "lst":
                     channels = db.find('channel')
-                    text = ""
+                    text = "channel\texpire_date\n"
                     for ch in channels:
                         expire = JalaliDatetime().from_date(ch.expire)
                         now = JalaliDatetime().now()
@@ -633,7 +633,11 @@ class SSP:
             first = 60 - JalaliDatetime().now().second
             job.run_repeating(callback=self.task, interval=60, first=first)
 
-            print("{}".format(self.robot.name))
+            user_name = self.robot.name
+            print("{}".format(user_name))
+            logging.info("{} started".format(user_name))
+            self.robot.send_message(chat_id=cna, text="started")
+
             self.updater.idle()
         except telegram.error.NetworkError as E:
             self.updater.stop()
