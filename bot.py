@@ -419,13 +419,13 @@ class SSP:
                 message.sent = True
                 db.update(message)
 
-    def task(self, bot, _):
+    def task(self, _, __):
         try:
             now = JalaliDatetime().now()
             channels = db.find('channel')
 
             if now.minute == 0:
-                bot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
+                self.robot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
 
             for channel in channels:
                 if util.time_is_in(now=now, channel=channel):
@@ -437,17 +437,17 @@ class SSP:
                 self.robot.send_document(document=open('bot_db.db', 'rb'),
                                          caption=now.strftime("%x"),
                                          chat_id=cna)
-                text = "channel\texpire_date\n"
+                text = "channel           expire_date\n"
                 for ch in channels:
                     expire = JalaliDatetime().from_date(ch.expire)
                     now = JalaliDatetime().now()
                     diff = expire - now
                     if diff.days < 7:
-                        text += "{} **{}** 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
+                        text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
                     else:
                         text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
-                self.robot.send_message(chat_id=cna, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
+                self.robot.send_message(chat_id=cna, text=text)
 
         except Exception as E:
             logging.error('Task {}'.format(E))
@@ -518,17 +518,17 @@ class SSP:
                                                 text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "lst":
                     channels = db.find('channel')
-                    text = "channel\texpire_date\n"
+                    text = "channel          expire_date\n"
                     for ch in channels:
                         expire = JalaliDatetime().from_date(ch.expire)
                         now = JalaliDatetime().now()
                         diff = expire - now
                         if diff.days < 7:
-                            text += "{} **{}** 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
+                            text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
                         else:
                             text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
-                    self.robot.send_message(chat_id=cna, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
+                    self.robot.send_message(chat_id=cna, text=text)
 
                 else:
                     self.robot.send_message(chat_id=chat_id,
