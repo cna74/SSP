@@ -257,8 +257,8 @@ def done(bot, update):
                 channel.interval = interval
                 db.update(channel)
             elif part1 == "off":
-                channel.bed = part1
-                channel.wake = part1
+                channel.bed = -1
+                channel.wake = -1
                 db.update(channel)
 
             text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))

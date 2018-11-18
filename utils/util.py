@@ -4,9 +4,9 @@ import numpy as np
 
 
 def sleep(entry=None, bed=None, wake=None):
-    entry = JalaliDatetime().now().strftime('%H%M') if not entry else entry.strftime('%H%M')
+    entry = JalaliDatetime().now().hour if not entry else entry.hour
 
-    if "off" in (bed, wake):
+    if -1 in (bed, wake):
         return False
 
     if entry >= bed > wake < entry or entry >= bed < wake > entry:
@@ -33,21 +33,20 @@ def time_is_in(now, channel):
 
 
 def remain(channel):
-    print(10)
     remaining = db.remain(channel)
     step = JalaliDatetime().now()
     rem = remaining
-    print(20)
     if channel.up:
         while remaining > 0:
+
             if sleep(step, bed=channel.bed, wake=channel.wake):
                 step += timedelta(hours=channel.wake / 10000 - step.hour)
 
+            # assume to send
             if time_is_in(now=step, channel=channel):
                 remaining -= 1
             step += timedelta(minutes=1)
 
-    print("rem {}".format(rem))
     if rem > 0 :
         date = step.strftime("%A %d %B %H:%M")
         if channel.up:

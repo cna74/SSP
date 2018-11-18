@@ -11,7 +11,7 @@ Base = declarative_base()
 
 class Channel(Base):
     def __init__(self, name, admin, group_id, plan,
-                 interval='20mr', bed='off', wake='off', up=True, logo=False, pos=7,
+                 interval='30mr', bed=3, wake=11, up=True, logo=False, pos=7,
                  register=JDateTime().now().to_datetime(), expire=timedelta):
         # required
         self.name = name
