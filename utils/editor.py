@@ -31,9 +31,9 @@ def id_remove(text, channel) -> str:
         if re.search(pattern_id, text):
             ids = re.findall(pattern_id, text)
             for id_ in ids:
-                if not id_.lower() == channel.name:
+                if not id_.lower() == channel.name.lower():
                     text = re.sub(id_, channel.name, text)
-            if not text.lower().strip().endswith(channel.name):
+            if not text.lower().strip().endswith(channel.name.lower()):
                 text += '\n' + channel.name
         else:
             text += '\n' + channel.name
