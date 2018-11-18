@@ -598,12 +598,8 @@ class SSP:
 
     def error_callback(self, _, __, error):
         try:
-            if isinstance(error, telegram.error.NetworkError):
-                self.updater.stop()
-                logging.error(error)
-                exit()
-            else:
-                logging.error(error)
+            logging.error(error)
+            self.robot.send_message(chat_id=cna, text="Heyyy {}".format(JalaliDatetime().now().strftime("%x")))
         except BaseException as E:
             logging.error("TelegramError {}".format(E))
 
