@@ -267,7 +267,7 @@ class SSP:
     def send_to_ch(self, channel):
         message = db.get_last_msg(channel_name=channel.name)
         try:
-            if not message:
+            if not isinstance(message, db.Message):
                 pass
 
             # media_group
@@ -412,10 +412,13 @@ class SSP:
         except AttributeError:
             pass
         except Exception as E:
-            logging.error('send_to_ch attempt {} Error: {}'.format(message.__str__(), E))
-            message.sent = True
-            message.ch_a = True
-            db.update(message)
+            if isinstance(message, db.Message):
+                message.sent = True
+                message.ch_a = True
+                db.update(message)
+                logging.error('send_to_ch attempt {} Error: {}'.format(message.__str__(), E))
+            else:
+                logging.error('send_to_ch attempt {} Error: not a message'.format(message.__str__()))
 
     def task(self, _, __):
         try:
