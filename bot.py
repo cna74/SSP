@@ -413,11 +413,8 @@ class SSP:
             pass
         except Exception as E:
             logging.error('send_to_ch attempt {} Error: {}'.format(message.__str__(), E))
-            if attempt < 2:
-                self.send_to_ch(channel, attempt + 1)
-            else:
-                message.sent = True
-                db.update(message)
+            message.sent = True
+            db.update(message)
 
     def task(self, _, __):
         try:
@@ -529,6 +526,12 @@ class SSP:
                             text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
                     self.robot.send_message(chat_id=cna, text=text)
+                elif command == "det":
+                    channel_name = args[1:]
+                    channel = db.find("channel", name=channel_name)
+                    if isinstance(channel, db.Channel):
+                        self.robot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
+                                                text="{}".format(channel.__str__()))
 
                 else:
                     self.robot.send_message(chat_id=chat_id,
@@ -552,7 +555,7 @@ class SSP:
                 channel = db.find("channel", admin=admin, name=name)
 
             if isinstance(channel, db.Channel):
-                text, _ = strings.status(channel, util.remain(channel=channel))
+                text = strings.status(channel, util.remain(channel=channel), button=False)
                 self.robot.send_message(chat_id=admin, text=text,
                                         reply_to_message_id=update.message.message_id)
                 logging.info("state : {}".format(channel.name))

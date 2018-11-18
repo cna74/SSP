@@ -30,8 +30,8 @@ class Channel(Base):
         self.expire = register + expire
 
     def __str__(self):
-        return "ch_name: {}, ch_admin: {}, group_id: {}, plan {}".format(
-            self.name, self.admin, self.group_id, self.plan)
+        return "ch_name: {}, ch_admin: {}, group_id: {}, plan {}, bed {}, wake {}, int {}".format(
+            self.name, self.admin, self.group_id, self.plan, self.bed, self.wake, self.interval)
 
     __tablename__ = "channel"
 

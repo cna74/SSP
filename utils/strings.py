@@ -13,23 +13,25 @@ def status_upgrade(channel):
            "به نام سینا علیزاده واریز کنید و سپس کد رهگیری را برای ادمین ارسال کنید".format(payment) + admin
 
 
-def status(channel, remain):
+def status(channel, remain, button=True):
     expire = JalaliDatetime().from_datetime(channel.expire).strftime("%x")
     logo = "استفاده از نام کانال" if not channel.logo else "✔️"
     plan = dict([(0, "پایه 🏅"), (1, "برنز 🥉"), (2, "نقره 🥈"), (3, "طلایی 🥇")]).get(channel.plan)
-    keyboard = [[Inline('وقفه ⏲️', callback_data='interval;{}'.format(channel.name)),
-                 Inline('ساعت توقف 🕰️', callback_data='bed;{}'.format(channel.name)),
-                 Inline('ساعت شروع 🕰️', callback_data='wake;{}'.format(channel.name))],
-                [Inline('مشاهده نمودار 📈', callback_data="graph;{}".format(channel.name)),
-                 Inline('تنظیم لوگو 🖼️', callback_data="logo;{}".format(channel.name))],
-                [Inline('تمدید 📆', callback_data='up;{}'.format(channel.name))]]
-    keyboard = InlineKeyboardMarkup(keyboard)
-
     text = "میزان وقفه ⏳= {}\nساعت توقف 🕰= {}\nساعت شروع 🕰= {}\nلوگو = {}\n\n طرح = {}\n{}\nاعتبار شما تا {}".format(
         channel.interval, channel.bed, channel.wake, logo, plan, remain, expire
     )
+    if button:
+        keyboard = [[Inline('وقفه ⏲️', callback_data='interval;{}'.format(channel.name)),
+                     Inline('ساعت توقف 🕰️', callback_data='bed;{}'.format(channel.name)),
+                     Inline('ساعت شروع 🕰️', callback_data='wake;{}'.format(channel.name))],
+                    [Inline('مشاهده نمودار 📈', callback_data="graph;{}".format(channel.name)),
+                     Inline('تنظیم لوگو 🖼️', callback_data="logo;{}".format(channel.name))],
+                    [Inline('تمدید 📆', callback_data='up;{}'.format(channel.name))]]
+        keyboard = InlineKeyboardMarkup(keyboard)
 
-    return text, keyboard
+        return text, keyboard
+
+    return text
 
 
 def set_logo_ok(channel,):
