@@ -414,6 +414,7 @@ class SSP:
         except Exception as E:
             logging.error('send_to_ch attempt {} Error: {}'.format(message.__str__(), E))
             message.sent = True
+            message.ch_a = True
             db.update(message)
 
     def task(self, _, __):
@@ -527,7 +528,7 @@ class SSP:
 
                     self.robot.send_message(chat_id=cna, text=text)
                 elif command == "det":
-                    channel_name = args[1:]
+                    channel_name, = args[1:]
                     channel = db.find("channel", name=channel_name)
                     if isinstance(channel, db.Channel):
                         self.robot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
