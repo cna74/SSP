@@ -11,10 +11,10 @@ import os
 
 warnings.simplefilter("ignore", category=Warning)
 
-sina, lili = 103086461, 303962908
+cna, rhn = 103086461, 303962908
 limit_size = 1
-logging.basicConfig(filename='report.log', level=logging.INFO,
-                    format='%(asctime)s: %(name)s: %(levelname)s: %(message)s')
+time_out = 60
+logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 logging.disable(logging.WARNING)
 
 
@@ -41,7 +41,7 @@ class SSP:
                 from_gp = ue.chat_id
                 msg_gp_id = ue.message_id
                 channel = db.find('channel', group_id=from_gp)
-                message = db.find(table='message', msg_gp_id=msg_gp_id, gp_id=from_gp)
+                message = db.find('message', msg_gp_id=msg_gp_id, gp_id=from_gp)
                 if isinstance(message, db.Message):
                     if ue.reply_to_message:
                         if ue.text:
@@ -68,8 +68,7 @@ class SSP:
                             message.other = 'url'
                         parse_mode = 'HTML' if message.other == 'url' else None
                         self.robot.edit_message_text(chat_id=message.to_channel, message_id=message.msg_ch_id,
-                                                     text=message.txt,
-                                                     parse_mode=parse_mode)
+                                                     text=message.txt, parse_mode=parse_mode)
                         message.sent = message.ch_a = True
                     elif message.sent:
                         media = out = None
@@ -138,7 +137,7 @@ class SSP:
 
                         if media:
                             self.robot.edit_message_media(media=media, chat_id=message.to_channel,
-                                                          message_id=message.msg_ch_id)
+                                                          message_id=message.msg_ch_id, timeout=time_out)
 
                         if out:
                             os.remove(out)
@@ -287,7 +286,7 @@ class SSP:
                     msg.ch_a = True
                     new_message.append(msg)
 
-                self.robot.send_media_group(chat_id=chat_id, media=media)
+                self.robot.send_media_group(chat_id=chat_id, media=media, timeout=time_out)
                 for msg in new_message:
                     db.update(msg)
                 logging.info('media_group sent {}'.format(message.__str__()))
@@ -339,7 +338,7 @@ class SSP:
                     out = "vid/{}_out.mp4".format(channel.name)
 
                     if message.size <= limit_size and channel.plan >= 3:
-                        self.robot.getFile(message.file_id).download(dir_, timeout=10)
+                        self.robot.getFile(message.file_id).download(dir_, timeout=20)
                         try:
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
@@ -347,7 +346,7 @@ class SSP:
                             message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
                                                                       video=open(out, 'rb'),
                                                                       caption=txt,
-                                                                      timeout=30).message_id
+                                                                      timeout=time_out).message_id
                         except Exception as _:
                             message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
                                                                       video=message.file_id,
@@ -364,14 +363,15 @@ class SSP:
                     out = "gif/{}_out.mp4".format(channel.name)
 
                     if message.size <= limit_size and channel.plan >= 2:
-                        self.robot.getFile(message.file_id).download(dir_, timeout=10)
+                        self.robot.getFile(message.file_id).download(dir_, timeout=20)
                         try:
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
 
                             message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
                                                                           animation=open(out, 'rb'),
-                                                                          caption=txt).message_id
+                                                                          caption=txt,
+                                                                          timeout=time_out).message_id
                         except Exception as _:
                             message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
                                                                           animation=message.file_id,
@@ -425,7 +425,7 @@ class SSP:
             channels = db.find('channel')
 
             if now.minute == 0:
-                bot.send_message(chat_id=sina, text=str(psutil.virtual_memory()[2]))
+                bot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
 
             for channel in channels:
                 if util.time_is_in(now=now, channel=channel):
@@ -436,8 +436,8 @@ class SSP:
             if now.hour == now.minute == 0:
                 self.robot.send_document(document=open('bot_db.db', 'rb'),
                                          caption=now.strftime("%x"),
-                                         chat_id=sina)
-                text = ""
+                                         chat_id=cna)
+                text = "channel\texpire_date"
                 for ch in channels:
                     expire = JalaliDatetime().from_date(ch.expire)
                     now = JalaliDatetime().now()
@@ -447,7 +447,7 @@ class SSP:
                     else:
                         text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
-                self.robot.send_message(chat_id=sina, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
+                self.robot.send_message(chat_id=cna, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
 
         except Exception as E:
             logging.error('Task {}'.format(E))
@@ -528,7 +528,7 @@ class SSP:
                         else:
                             text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
-                    self.robot.send_message(chat_id=sina, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
+                    self.robot.send_message(chat_id=cna, text=text, parse_mode=telegram.ParseMode.MARKDOWN)
 
                 else:
                     self.robot.send_message(chat_id=chat_id,
@@ -622,7 +622,7 @@ class SSP:
             # endregion
             conv.conversation(self.updater)
 
-            dpa(CommandHandler(command="admin", filters=Filters.user([sina, lili]), callback=self.admin, pass_args=True))
+            dpa(CommandHandler(command="admin", filters=Filters.user([cna, rhn]), callback=self.admin, pass_args=True))
 
             dpa(CommandHandler(command="state", filters=Filters.private, callback=self.state, pass_args=True))
             dpa(CommandHandler(command="set", filters=Filters.private, callback=self.set, pass_args=True))
