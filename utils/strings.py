@@ -14,12 +14,17 @@ def status_upgrade(channel):
 
 
 def status(channel, remain, button=True):
+    print(1)
     expire = JalaliDatetime().from_datetime(channel.expire).strftime("%x")
+    print(2)
     logo = "استفاده از نام کانال" if not channel.logo else "✔️"
+    print(3)
     plan = dict([(0, "پایه 🏅"), (1, "برنز 🥉"), (2, "نقره 🥈"), (3, "طلایی 🥇")]).get(channel.plan)
+    print(4)
     text = "میزان وقفه ⏳= {}\nساعت توقف 🕰= {}\nساعت شروع 🕰= {}\nلوگو = {}\n\n طرح = {}\n{}\nاعتبار شما تا {}".format(
         channel.interval, channel.bed, channel.wake, logo, plan, remain, expire
     )
+    print(5)
     if button:
         keyboard = [[Inline('وقفه ⏲️', callback_data='interval;{}'.format(channel.name)),
                      Inline('ساعت توقف 🕰️', callback_data='bed;{}'.format(channel.name)),
