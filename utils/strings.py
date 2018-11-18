@@ -115,6 +115,8 @@ admin_hint = "برای اضافه کردن کانال جدید\n" \
              "/admin edit <ch_name> <new_ch_name>\n\n" \
              "لیست کانال ها\n" \
              "/admin lst\n\n" \
+             "جزییات یک کانال\n" \
+             "/admin det <ch_name>\n\n" \
              "برای حدف کانال\n" \
              "/admin del <ch_name>\n\n" \
 

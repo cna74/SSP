@@ -264,7 +264,7 @@ class SSP:
         except Exception as E:
             logging.error('add_members {}'.format(E))
 
-    def send_to_ch(self, channel, attempt=1):
+    def send_to_ch(self, channel):
         message = db.get_last_msg(channel_name=channel.name)
         try:
             if not message:
@@ -532,7 +532,7 @@ class SSP:
                     channel = db.find("channel", name=channel_name)
                     if isinstance(channel, db.Channel):
                         self.robot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
-                                                text="{}".format(channel.__str__()))
+                                                text=strings.status(channel, util.remain(channel), button=False))
 
                 else:
                     self.robot.send_message(chat_id=chat_id,
