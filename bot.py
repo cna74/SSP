@@ -14,7 +14,8 @@ warnings.simplefilter("ignore", category=Warning)
 cna, rhn = 103086461, 303962908
 limit_size = 1
 time_out = 60
-logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
+logging.basicConfig(filename='report.log', level=logging.INFO,
+                    format='%(asctime)s: %(levelname)s: %(message)s')
 logging.disable(logging.WARNING)
 
 
@@ -40,7 +41,7 @@ class SSP:
             if ue:
                 from_gp = ue.chat_id
                 msg_gp_id = ue.message_id
-                channel = db.find('channel', group_id=from_gp)
+                # channel = db.find('channel', group_id=from_gp)
                 message = db.find('message', msg_gp_id=msg_gp_id, gp_id=from_gp)
                 if isinstance(message, db.Message):
                     if ue.reply_to_message:
@@ -58,95 +59,95 @@ class SSP:
                                     message.txt = ue.text
                                     db.update(message)
 
-                    # after sent
-                    elif ue.text and message.sent:
-                        message.txt = editor.id_remove(text=ue.text, channel=channel)
-                        if len(um.entities) > 0:
-                            entities = um.entities
-                            url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
-                            message.txt += '\n<a href="{}">​​​​​​​​​​​</a>'.format(url)
-                            message.other = 'url'
-                        parse_mode = 'HTML' if message.other == 'url' else None
-                        self.robot.edit_message_text(chat_id=message.to_channel, message_id=message.msg_ch_id,
-                                                     text=message.txt, parse_mode=parse_mode)
-                        message.sent = message.ch_a = True
-                    elif message.sent:
-                        media = out = None
-                        text = ue.caption if ue.caption else ' '
-                        text = editor.id_remove(text=text, channel=channel)
-
-                        if ue.photo:
-                            media = ue.photo[-1].file_id
-                            dir_ = "image/{}.jpg".format(channel.name)
-                            out = 'image/{}_out.jpg'.format(channel.name)
-                            self.robot.getFile(media).download(dir_)
-
-                            message.kind = "photo"
-                            if channel.plan >= 1:
-                                text = editor.image_watermark(photo=dir_, out=out, caption=text, channel=channel)
-                                media = telegram.InputMediaPhoto(media=open(out, 'rb'), caption=text)
-                            else:
-                                text = editor.id_remove(text=text, channel=channel)
-                                media = telegram.InputMediaPhoto(media=media, caption=text)
-
-                        elif ue.animation:
-                            media = ue.animation.file_id
-                            mime = str(um.animation.mime_type).split('/')[1]
-                            dir_ = "gif/{}.{}".format(channel.name, mime)
-                            out = "gif/{}_out.mp4".format(channel.name)
-                            size = ue.video.file_size / (1024 ** 2)
-
-                            message.mime = mime
-                            message.kind = 'animation'
-
-                            if size <= limit_size and channel.plan >= 2:
-                                self.robot.getFile(media).download(dir_)
-                                text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
-                                                            caption=text, channel=channel)
-                                media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
-                            else:
-                                text = editor.id_remove(text=text, channel=channel)
-                                media = telegram.InputMediaAnimation(media=media, caption=text)
-
-                        elif ue.video:
-                            media = ue.video.file_id
-                            mime = str(um.video.mime_type).split('/')[1]
-                            dir_ = "vid/{}.{}".format(channel.name, mime)
-                            out = 'vid/{}_out.mp4'.format(channel.name)
-                            size = ue.video.file_size / (1024 ** 2)
-
-                            message.mime = mime
-                            message.kind = 'video'
-
-                            if size < limit_size and channel.plan >= 3:
-                                self.robot.getFile(media).download(dir_)
-                                text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
-                                                            caption=text, channel=channel)
-                                media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
-                            else:
-                                text = editor.id_remove(text=text, channel=channel)
-                                media = telegram.InputMediaVideo(media=media, caption=text)
-
-                        elif ue.document:
-                            media = ue.document.file_id
-                            media = telegram.InputMediaDocument(media=media, caption=text)
-
-                        elif ue.audio:
-                            media = ue.audio.file_id
-                            media = telegram.InputMediaAudio(media=media, caption=text)
-
-                        if media:
-                            self.robot.edit_message_media(media=media, chat_id=message.to_channel,
-                                                          message_id=message.msg_ch_id, timeout=time_out)
-
-                        if out:
-                            os.remove(out)
-                        if ue.caption:
-                            self.robot.edit_message_caption(chat_id=message.to_channel, message_id=message.msg_ch_id,
-                                                            caption=text)
-
-                        message.sent = message.ch_a = True
-                        message.txt = text
+                    # # after sent
+                    # elif ue.text and message.sent:
+                    #     message.txt = editor.id_remove(text=ue.text, channel=channel)
+                    #     if len(um.entities) > 0:
+                    #         entities = um.entities
+                    #         url = ''.join([entities[i].url if entities[i].url else '' for i in range(len(entities))])
+                    #         message.txt += '\n<a href="{}">​​​​​​​​​​​</a>'.format(url)
+                    #         message.other = 'url'
+                    #     parse_mode = 'HTML' if message.other == 'url' else None
+                    #     self.robot.edit_message_text(chat_id=message.to_channel, message_id=message.msg_ch_id,
+                    #                                  text=message.txt, parse_mode=parse_mode)
+                    #     message.sent = message.ch_a = True
+                    # elif message.sent:
+                    #     media = out = None
+                    #     text = ue.caption if ue.caption else ' '
+                    #     text = editor.id_remove(text=text, channel=channel)
+                    #
+                    #     if ue.photo:
+                    #         media = ue.photo[-1].file_id
+                    #         dir_ = "image/{}.jpg".format(channel.name)
+                    #         out = 'image/{}_out.jpg'.format(channel.name)
+                    #         self.robot.getFile(media).download(dir_)
+                    #
+                    #         message.kind = "photo"
+                    #         if channel.plan >= 1:
+                    #             text = editor.image_watermark(photo=dir_, out=out, caption=text, channel=channel)
+                    #             media = telegram.InputMediaPhoto(media=open(out, 'rb'), caption=text)
+                    #         else:
+                    #             text = editor.id_remove(text=text, channel=channel)
+                    #             media = telegram.InputMediaPhoto(media=media, caption=text)
+                    #
+                    #     elif ue.animation:
+                    #         media = ue.animation.file_id
+                    #         mime = str(um.animation.mime_type).split('/')[1]
+                    #         dir_ = "gif/{}.{}".format(channel.name, mime)
+                    #         out = "gif/{}_out.mp4".format(channel.name)
+                    #         size = ue.video.file_size / (1024 ** 2)
+                    #
+                    #         message.mime = mime
+                    #         message.kind = 'animation'
+                    #
+                    #         if size <= limit_size and channel.plan >= 2:
+                    #             self.robot.getFile(media).download(dir_)
+                    #             text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
+                    #                                         caption=text, channel=channel)
+                    #             media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
+                    #         else:
+                    #             text = editor.id_remove(text=text, channel=channel)
+                    #             media = telegram.InputMediaAnimation(media=media, caption=text)
+                    #
+                    #     elif ue.video:
+                    #         media = ue.video.file_id
+                    #         mime = str(um.video.mime_type).split('/')[1]
+                    #         dir_ = "vid/{}.{}".format(channel.name, mime)
+                    #         out = 'vid/{}_out.mp4'.format(channel.name)
+                    #         size = ue.video.file_size / (1024 ** 2)
+                    #
+                    #         message.mime = mime
+                    #         message.kind = 'video'
+                    #
+                    #         if size < limit_size and channel.plan >= 3:
+                    #             self.robot.getFile(media).download(dir_)
+                    #             text = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
+                    #                                         caption=text, channel=channel)
+                    #             media = telegram.InputMediaVideo(media=open(out, 'rb'), caption=text)
+                    #         else:
+                    #             text = editor.id_remove(text=text, channel=channel)
+                    #             media = telegram.InputMediaVideo(media=media, caption=text)
+                    #
+                    #     elif ue.document:
+                    #         media = ue.document.file_id
+                    #         media = telegram.InputMediaDocument(media=media, caption=text)
+                    #
+                    #     elif ue.audio:
+                    #         media = ue.audio.file_id
+                    #         media = telegram.InputMediaAudio(media=media, caption=text)
+                    #
+                    #     if media:
+                    #         self.robot.edit_message_media(media=media, chat_id=message.to_channel,
+                    #                                       message_id=message.msg_ch_id, timeout=time_out)
+                    #
+                    #     if out:
+                    #         os.remove(out)
+                    #     if ue.caption:
+                    #         self.robot.edit_message_caption(chat_id=message.to_channel, message_id=message.msg_ch_id,
+                    #                                         caption=text)
+                    #
+                    #     message.sent = message.ch_a = True
+                    #     message.txt = text
 
                     # before sent
                     elif ue.text:
@@ -293,17 +294,17 @@ class SSP:
 
             # edited
             elif message.ch_a:
-                txt = editor.id_remove(text=message.txt, channel=channel)
-
-                if message.kind == 'text':
-                    message.msg_ch_id = self.robot.edit_message_text(chat_id=message.to_channel, text=txt,
-                                                                     message_id=message.msg_ch_id)
-                else:
-                    message.msg_ch_id = self.robot.edit_message_caption(chat_id=message.to_channel, caption=txt,
-                                                                        message_id=message.msg_ch_id)
-
-                db.update(message)
-                logging.info('edit_msg {}'.format(message.__str__()))
+                pass
+                # txt = editor.id_remove(text=message.txt, channel=channel)
+                #
+                # if message.kind == 'text':
+                #     self.robot.edit_message_text(chat_id=message.to_channel, text=txt, message_id=message.msg_ch_id)
+                # else:
+                #     self.robot.edit_message_caption(chat_id=message.to_channel, caption=txt,
+                #                                     message_id=message.msg_ch_id)
+                #
+                # db.update(message)
+                # logging.info('edit_msg {}'.format(message.__str__()))
 
             # regular
             elif not message.ch_a:
@@ -311,8 +312,7 @@ class SSP:
                 parse_mode = 'HTML' if message.other == 'url' else None
 
                 if message.kind == 'text':
-                    message.msg_ch_id = self.robot.send_message(chat_id=message.to_channel, text=txt,
-                                                                parse_mode=parse_mode).message_id
+                    self.robot.send_message(chat_id=message.to_channel, text=txt, parse_mode=parse_mode)
 
                 elif message.kind == 'photo':
                     dir_ = "image/{}.jpg".format(channel.name)
@@ -321,16 +321,14 @@ class SSP:
                         try:
                             self.robot.getFile(message.file_id).download(dir_)
                             txt = editor.image_watermark(photo=dir_, out=out, caption=message.txt, channel=channel)
-                            message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
-                                                                      caption=txt, timeout=time_out).message_id
+                            self.robot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
+                                                  caption=txt, timeout=time_out)
                         except Exception:
                             txt = editor.id_remove(text=message.txt, channel=channel)
-                            message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id,
-                                                                      caption=txt)
+                            self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id, caption=txt)
                     else:
                         txt = editor.id_remove(message.txt, channel)
-                        message.msg_ch_id = self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id,
-                                                                  caption=txt).message_id
+                        self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id, caption=txt)
 
                 elif message.kind == 'video':
                     form = message.mime
@@ -343,19 +341,13 @@ class SSP:
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
 
-                            message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
-                                                                      video=open(out, 'rb'),
-                                                                      caption=txt,
-                                                                      timeout=time_out).message_id
+                            self.robot.send_video(chat_id=message.to_channel, video=open(out, 'rb'),
+                                                  caption=txt, timeout=time_out)
                         except Exception:
-                            message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
-                                                                      video=message.file_id,
-                                                                      caption=txt).message_id
+                            self.robot.send_video(chat_id=message.to_channel, video=message.file_id, caption=txt)
                     else:
                         txt = editor.id_remove(text=message.txt, channel=channel)
-                        message.msg_ch_id = self.robot.send_video(chat_id=message.to_channel,
-                                                                  video=message.file_id,
-                                                                  caption=txt).message_id
+                        self.robot.send_video(chat_id=message.to_channel, video=message.file_id, caption=txt)
 
                 elif message.kind == 'animation':
                     form = message.mime
@@ -368,39 +360,29 @@ class SSP:
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
 
-                            message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
-                                                                          animation=open(out, 'rb'),
-                                                                          caption=txt,
-                                                                          timeout=time_out).message_id
+                            self.robot.send_animation(chat_id=message.to_channel, animation=open(out, 'rb'),
+                                                      caption=txt, timeout=time_out)
                         except Exception as _:
-                            message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
-                                                                          animation=message.file_id,
-                                                                          caption=txt).message_id
+                            self.robot.send_animation(chat_id=message.to_channel, animation=message.file_id,
+                                                      caption=txt)
                     else:
                         txt = editor.id_remove(text=message.txt, channel=channel)
-                        message.msg_ch_id = self.robot.send_animation(chat_id=message.to_channel,
-                                                                      animation=message.file_id,
-                                                                      caption=txt).message_id
+                        self.robot.send_animation(chat_id=message.to_channel, animation=message.file_id, caption=txt)
 
                 elif message.kind == 'audio':
-                    message.msg_ch_id = self.robot.send_audio(chat_id=message.to_channel, audio=message.file_id,
-                                                              caption=txt).message_id
+                    self.robot.send_audio(chat_id=message.to_channel, audio=message.file_id, caption=txt)
 
                 elif message.kind == 'document':
-                    message.msg_ch_id = self.robot.send_document(chat_id=message.to_channel, document=message.file_id,
-                                                                 caption=txt).message_id
+                    self.robot.send_document(chat_id=message.to_channel, document=message.file_id, caption=txt)
 
                 elif message.kind == 'v_note':
-                    message.msg_ch_id = self.robot.send_video_note(chat_id=message.to_channel,
-                                                                   video_note=message.file_id).message_id
+                    self.robot.send_video_note(chat_id=message.to_channel, video_note=message.file_id)
 
                 elif message.kind == 'voice':
-                    message.msg_ch_id = self.robot.send_voice(chat_id=message.to_channel, voice=message.file_id,
-                                                              caption=txt).message_id
+                    self.robot.send_voice(chat_id=message.to_channel, voice=message.file_id, caption=txt)
 
                 elif message.kind == 'sticker':
-                    message.msg_ch_id = self.robot.send_sticker(chat_id=message.to_channel, sticker=message.file_id,
-                                                                caption=txt).message_id
+                    self.robot.send_sticker(chat_id=message.to_channel, sticker=message.file_id, caption=txt)
 
                 logging.info('send_to_ch {}'.format(message.__str__()))
                 message.sent = True
@@ -419,39 +401,6 @@ class SSP:
                 logging.error('send_to_ch attempt {} Error: {}'.format(message.__str__(), E))
             else:
                 logging.error('send_to_ch attempt {} Error: not a message'.format(message.__str__()))
-
-    def task(self, _, __):
-        try:
-            now = JalaliDatetime().now()
-            channels = db.find('channel')
-
-            if now.minute == 0:
-                self.robot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
-
-            for channel in channels:
-                if util.time_is_in(now=now, channel=channel):
-                    self.send_to_ch(channel=channel)
-                if now.hour == now.minute == 0:
-                    self.add_member(channel=channel)
-
-            if now.hour == now.minute == 0:
-                self.robot.send_document(document=open('bot_db.db', 'rb'),
-                                         caption=now.strftime("%x"),
-                                         chat_id=cna)
-                text = "channel           expire_date\n"
-                for ch in channels:
-                    expire = JalaliDatetime().from_date(ch.expire)
-                    now = JalaliDatetime().now()
-                    diff = expire - now
-                    if diff.days < 7:
-                        text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
-                    else:
-                        text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
-
-                self.robot.send_message(chat_id=cna, text=text)
-
-        except Exception as E:
-            logging.error('Task {}'.format(E))
 
     def send_info(self, _, update):
         try:
@@ -612,6 +561,39 @@ class SSP:
             self.robot.send_message(chat_id=cna, text="Heyyy {}".format(JalaliDatetime().now().strftime("%x")))
         except BaseException as E:
             logging.error("TelegramError {}".format(E))
+
+    def task(self, _, __):
+        try:
+            now = JalaliDatetime().now()
+            channels = db.find('channel')
+
+            if now.minute == 0:
+                self.robot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
+
+            for channel in channels:
+                if util.time_is_in(now=now, channel=channel):
+                    self.send_to_ch(channel=channel)
+                if now.hour == now.minute == 0:
+                    self.add_member(channel=channel)
+
+            if now.hour == now.minute == 0:
+                self.robot.send_document(document=open('bot_db.db', 'rb'),
+                                         caption=now.strftime("%x"),
+                                         chat_id=cna)
+                text = "channel           expire_date\n"
+                for ch in channels:
+                    expire = JalaliDatetime().from_date(ch.expire)
+                    now = JalaliDatetime().now()
+                    diff = expire - now
+                    if diff.days < 7:
+                        text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
+                    else:
+                        text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
+
+                self.robot.send_message(chat_id=cna, text=text)
+
+        except Exception as E:
+            logging.error('Task {}'.format(E))
 
     def run(self):
         try:

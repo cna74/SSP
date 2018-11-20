@@ -3,33 +3,35 @@ from utils import db
 import numpy as np
 
 
-def sleep(entry=None, bed=None, wake=None):
-    entry = JalaliDatetime().now().hour if not entry else entry.hour
+def sleep(now=None, bed=None, wake=None):
+    now = JalaliDatetime().now().hour if not now else now.hour
 
     if -1 in (bed, wake):
         return False
 
-    if entry >= bed > wake < entry or entry >= bed < wake > entry:
+    elif now >= bed > wake < now or now >= bed < wake > now:
         return True
 
-    return False
+    else:
+        return False
 
 
 def time_is_in(now, channel):
     if not channel.up:
         return False
 
-    interval = (int(channel.interval[:-2]),)
-    if channel.interval.endswith("mr"):
-        interval = np.arange(0, 60, interval[0], dtype=np.uint8)
-    elif channel.interval.endswith("hr"):
-        interval = np.arange(0, 24, interval[0], dtype=np.uint8)
+    if sleep(now=now, bed=channel.bed, wake=channel.wake):
+        return False
+    else:
+        interval = (int(channel.interval[:-2]),)
+        if channel.interval.endswith("mr"):
+            interval = np.arange(0, 60, interval[0], dtype=np.uint8)
+        elif channel.interval.endswith("hr"):
+            interval = np.arange(0, 24, interval[0], dtype=np.uint8)
 
-    if (channel.interval[-2] == "m" and now.minute in interval) or \
-            (channel.interval[-2] == "h" and now.hour in interval):
-        return True
-
-    return False
+        if (channel.interval[-2] == "m" and now.minute in interval) or \
+                (channel.interval[-2] == "h" and now.hour in interval):
+            return True
 
 
 def remain(channel):
@@ -39,8 +41,8 @@ def remain(channel):
     if channel.up:
         while remaining > 0:
 
-            if sleep(step, bed=channel.bed, wake=channel.wake):
-                step += timedelta(hours=channel.wake / 10000 - step.hour)
+            # if sleep(step, bed=channel.bed, wake=channel.wake):
+            #     step += timedelta(hours=channel.wake / 10000 - step.hour)
 
             # assume to send
             if time_is_in(now=step, channel=channel):

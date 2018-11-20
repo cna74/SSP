@@ -183,7 +183,7 @@ def update(obj):
     if isinstance(obj, Message):
         row = session.query(Message).get(obj.id)
         row.txt = obj.txt
-        row.msg_ch_id = obj.msg_ch_id
+        # row.msg_ch_id = obj.msg_ch_id
         row.sent = obj.sent
         row.ch_a = obj.ch_a
 

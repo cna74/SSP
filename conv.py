@@ -99,7 +99,7 @@ def select(bot, update):
             return step2
         elif data[0] == 'wake':
             keyboard = []
-            for i in range(1, 25):
+            for i in range(0, 24):
                 keyboard.append(
                     [Inline('{}:00'.format(str(i).zfill(2)), callback_data="{}w;{}".format(str(i).zfill(2), data[1]))])
             keyboard = np.array(keyboard).reshape((6, -1)).tolist()
@@ -112,7 +112,7 @@ def select(bot, update):
             return done
         elif data[0] == 'bed':
             keyboard = []
-            for i in range(1, 25):
+            for i in range(0, 24):
                 keyboard.append(
                     [Inline('{}:00'.format(str(i).zfill(2)), callback_data="{}b;{}".format(str(i).zfill(2), data[1]))])
             keyboard = np.array(keyboard).reshape((6, -1)).tolist()
@@ -246,11 +246,11 @@ def done(bot, update):
                 pass
             elif part1.endswith('b'):
                 bed = part1[:-1]
-                channel.bed = bed
+                channel.bed = int(bed)
                 db.update(channel)
             elif part1.endswith('w'):
                 wake = part1[:-1]
-                channel.wake = wake
+                channel.wake = int(wake)
                 db.update(channel)
             elif part1.endswith("r") or part1.endswith("f"):
                 interval = part1
