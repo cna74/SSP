@@ -613,7 +613,7 @@ class SSP:
 
             first = 60 - JalaliDatetime().now().second
             job.run_repeating(callback=self.task, interval=60, first=first)
-            job.run_daily(callback=self.mid_night, time=JalaliDatetime().to_datetime())
+            job.run_daily(callback=self.mid_night, time=JalaliDatetime(hour=0, minute=0).to_datetime())
 
             user_name = self.robot.name
             print("{}".format(user_name))
