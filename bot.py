@@ -1,6 +1,7 @@
 from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from khayyam3.tehran_timezone import timedelta, JalaliDatetime
 from utils import editor, strings, db, util
+from datetime import time
 import warnings
 import telegram
 import logging
@@ -613,7 +614,7 @@ class SSP:
 
             first = 60 - JalaliDatetime().now().second
             job.run_repeating(callback=self.task, interval=60, first=first)
-            job.run_daily(callback=self.mid_night, time=JalaliDatetime(hour=0, minute=0).to_datetime())
+            job.run_daily(callback=self.mid_night, time=time(hour=0, minute=0))
 
             user_name = self.robot.name
             print("{}".format(user_name))
