@@ -14,8 +14,7 @@ warnings.simplefilter("ignore", category=Warning)
 cna, rhn = 103086461, 303962908
 limit_size = 1
 time_out = 60
-logging.basicConfig(filename='report.log', level=logging.INFO,
-                    format='%(asctime)s: %(levelname)s: %(message)s')
+logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 logging.disable(logging.WARNING)
 
 
@@ -267,6 +266,7 @@ class SSP:
 
     def send_to_ch(self, channel):
         message = db.get_last_msg(channel_name=channel.name)
+        dir_ = out = None
         try:
             if not isinstance(message, db.Message):
                 pass
@@ -292,29 +292,12 @@ class SSP:
                     db.update(msg)
                 logging.info('media_group sent {}'.format(message.__str__()))
 
-            # edited
-            elif message.ch_a:
-                pass
-                # txt = editor.id_remove(text=message.txt, channel=channel)
-                #
-                # if message.kind == 'text':
-                #     self.robot.edit_message_text(chat_id=message.to_channel, text=txt, message_id=message.msg_ch_id)
-                # else:
-                #     self.robot.edit_message_caption(chat_id=message.to_channel, caption=txt,
-                #                                     message_id=message.msg_ch_id)
-                #
-                # db.update(message)
-                # logging.info('edit_msg {}'.format(message.__str__()))
-
             # regular
             elif not message.ch_a:
                 txt = editor.id_remove(text=message.txt, channel=channel)
                 parse_mode = 'HTML' if message.other == 'url' else None
 
-                if message.kind == 'text':
-                    self.robot.send_message(chat_id=message.to_channel, text=txt, parse_mode=parse_mode)
-
-                elif message.kind == 'photo':
+                if message.kind == 'photo':
                     dir_ = "image/{}.jpg".format(channel.name)
                     out = "image/{}_out.jpg".format(channel.name)
                     if channel.plan >= 1:
@@ -355,8 +338,8 @@ class SSP:
                     out = "gif/{}_out.mp4".format(channel.name)
 
                     if message.size <= limit_size and channel.plan >= 2:
-                        self.robot.getFile(message.file_id).download(dir_, timeout=20)
                         try:
+                            self.robot.getFile(message.file_id).download(dir_, timeout=20)
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
 
@@ -368,6 +351,9 @@ class SSP:
                     else:
                         txt = editor.id_remove(text=message.txt, channel=channel)
                         self.robot.send_animation(chat_id=message.to_channel, animation=message.file_id, caption=txt)
+
+                elif message.kind == 'text':
+                    self.robot.send_message(chat_id=message.to_channel, text=txt, parse_mode=parse_mode)
 
                 elif message.kind == 'audio':
                     self.robot.send_audio(chat_id=message.to_channel, audio=message.file_id, caption=txt)
@@ -383,6 +369,12 @@ class SSP:
 
                 elif message.kind == 'sticker':
                     self.robot.send_sticker(chat_id=message.to_channel, sticker=message.file_id, caption=txt)
+
+                try:
+                    if dir_ or out:
+                        _ = [os.remove(i) for i in [dir_, out]]
+                except Exception:
+                    pass
 
                 logging.info('send_to_ch {}'.format(message.__str__()))
                 message.sent = True
@@ -576,24 +568,25 @@ class SSP:
                 if now.hour == now.minute == 0:
                     self.add_member(channel=channel)
 
-            if now.hour == now.minute == 0:
-                self.robot.send_document(document=open('bot_db.db', 'rb'),
-                                         caption=now.strftime("%x"),
-                                         chat_id=cna)
-                text = "channel           expire_date\n"
-                for ch in channels:
-                    expire = JalaliDatetime().from_date(ch.expire)
-                    now = JalaliDatetime().now()
-                    diff = expire - now
-                    if diff.days < 7:
-                        text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
-                    else:
-                        text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
-
-                self.robot.send_message(chat_id=cna, text=text)
-
         except Exception as E:
             logging.error('Task {}'.format(E))
+
+    def mid_night(self, _, __):
+        now = JalaliDatetime().now()
+        channels = db.find('channel')
+        self.robot.send_document(document=open('bot_db.db', 'rb'), caption=now.strftime("%x"), chat_id=cna)
+
+        text = "channel           expire_date\n"
+        for ch in channels:
+            expire = JalaliDatetime().from_date(ch.expire)
+            now = JalaliDatetime().now()
+            diff = expire - now
+            if diff.days < 7:
+                text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
+            else:
+                text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
+
+        self.robot.send_message(chat_id=cna, text=text)
 
     def run(self):
         try:
@@ -620,6 +613,7 @@ class SSP:
 
             first = 60 - JalaliDatetime().now().second
             job.run_repeating(callback=self.task, interval=60, first=first)
+            job.run_daily(callback=self.mid_night, time=JalaliDatetime().to_datetime())
 
             user_name = self.robot.name
             print("{}".format(user_name))
