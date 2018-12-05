@@ -23,14 +23,17 @@ def time_is_in(now, channel):
     if sleep(now=now, bed=channel.bed, wake=channel.wake):
         return False
     else:
+
+        # if endswith hf or mf
         interval = (int(channel.interval[:-2]),)
+
         if channel.interval.endswith("mr"):
             interval = np.arange(0, 60, interval[0], dtype=np.uint8)
         elif channel.interval.endswith("hr"):
             interval = np.arange(0, 24, interval[0], dtype=np.uint8)
 
         if (channel.interval[-2] == "m" and now.minute in interval) or \
-                (channel.interval[-2] == "h" and now.hour in interval):
+                (channel.interval[-2] == "h" and now.hour in interval and now.minute == 0):
             return True
 
 
@@ -40,9 +43,6 @@ def remain(channel):
     rem = remaining
     if channel.up:
         while remaining > 0:
-
-            # if sleep(step, bed=channel.bed, wake=channel.wake):
-            #     step += timedelta(hours=channel.wake / 10000 - step.hour)
 
             # assume to send
             if time_is_in(now=step, channel=channel):
