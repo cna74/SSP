@@ -266,11 +266,8 @@ class SSP:
         message = db.get_last_msg(channel_name=channel.name)
         dir_ = out = None
         try:
-            if not isinstance(message, db.Message):
-                pass
-
             # media_group
-            elif isinstance(message, list):
+            if isinstance(message, list):
                 chat_id = channel.name
                 media = []
                 new_message = []
