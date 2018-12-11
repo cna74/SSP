@@ -10,8 +10,6 @@ import conv
 import var
 import os
 
-warnings.simplefilter("ignore", category=Warning)
-
 cna, rhn = 103086461, 303962908
 limit_size = 1
 time_out = 60
@@ -376,7 +374,7 @@ class SSP:
                 except Exception:
                     pass
 
-                logging.info('send_to_ch {}'.format(message.__str__()))
+                logging.debug('send_to_ch {}'.format(message.__str__()))
                 message.sent = True
                 message.ch_a = True
                 db.update(message)
