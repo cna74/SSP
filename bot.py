@@ -432,7 +432,7 @@ class SSP:
                     channel_name, expire = args[1:]
                     if db.find("channel", name=channel_name):
                         channel = db.find("channel", name=channel_name)
-                        channel.expire + timedelta(days=int(expire))
+                        channel.expire += timedelta(days=int(expire))
                         db.update(channel)
                         self.robot.send_message(chat_id=chat_id,
                                                 reply_to_message_id=message_id,
