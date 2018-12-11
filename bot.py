@@ -16,7 +16,6 @@ cna, rhn = 103086461, 303962908
 limit_size = 1
 time_out = 60
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
-logging.disable(logging.WARNING)
 
 
 # noinspection PyBroadException

@@ -4,11 +4,13 @@ from khayyam3.tehran_timezone import timedelta, JalaliDatetime
 from utils import editor, strings, db, util
 import numpy as np
 import matplotlib
+import warnings
 import logging
 import os
 
 matplotlib.use("AGG", force=True)
 import matplotlib.pyplot as plt
+warnings.simplefilter("ignore", category=Warning)
 
 
 # region setting
