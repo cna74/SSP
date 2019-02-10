@@ -657,9 +657,9 @@ def conversation(updater):
     # sasan
     updater.dispatcher.add_handler(
         ConversationHandler(
-            entry_points=[MessageHandler(filters=Filters.user([103086461, ]), callback=sasan_gif)],
-            states={get_gif_delay: [MessageHandler(filters=Filters.user([103086461, ]), callback=get_gif_delay)],
-                    get_caption: [MessageHandler(filters=Filters.user([103086461, ]), callback=get_caption)]},
+            entry_points=[MessageHandler(filters=Filters.user([103086461, 89424916]), callback=sasan_gif)],
+            states={get_gif_delay: [MessageHandler(filters=Filters.user([103086461, 89424916]), callback=get_gif_delay)],
+                    get_caption: [MessageHandler(filters=Filters.user([103086461, 89424916]), callback=get_caption)]},
             fallbacks=[CommandHandler(command='cancel', callback=cancel)],
             conversation_timeout=timedelta(minutes=5))
     )
