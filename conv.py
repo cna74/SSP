@@ -565,7 +565,6 @@ def sasan_gif(bot, update):
                     bot.send_message(text="وقفه روی هر عکسی چقدر باشه؟",
                                      chat_id=update.message.chat_id)
                     return get_gif_delay
-
     except ValueError:
         bot.send_message(text="کپشن نداره!", chat_id=update.message.chat_id)
     except Exception as E:
@@ -590,11 +589,12 @@ def get_caption(bot, update):
         bot.send_animation(chat_id=update.message.chat_id, animation=open(gif_name, "rb"), caption=caption, timeout=60)
         try:
             os.remove(gif_name)
-            files = os.listdir(os.path.split(gif_name)[0])
+            fl = os.path.split(gif_name)[0]
+            files = os.listdir(fl)
             for i in files:
-                os.remove(i)
-        except Exception as _:
-            pass
+                os.remove(os.path.join(fl, i))
+        except Exception as E:
+            logging.error("get_caption {}".format(E))
         return ConversationHandler.END
     except Exception as E:
         logging.error("get_caption {}".format(E))
