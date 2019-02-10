@@ -1,9 +1,10 @@
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip, clips_array
+from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip, TextClip, clips_array, concatenate_videoclips
 import moviepy.config as mpy_conf
 import multiprocessing
 from PIL import Image
 import warnings
 import logging
+import imageio
 import re
 import os
 
@@ -151,3 +152,11 @@ def vid_watermark(vid, out, kind, caption, channel) -> str:
 
     except Exception as E:
         logging.error('gif_watermark {}'.format(E))
+
+
+def sasan_gif_return(f_name, images, duration):
+    try:
+        vid = concatenate_videoclips([ImageClip(i, duration=duration) for i in images])
+        vid.write_videofile(f_name, fps=.5, progress_bar=False, verbose=False, threads=multiprocessing.cpu_count())
+    except Exception as E:
+        logging.error("sasan_gif_return {}".format(E))

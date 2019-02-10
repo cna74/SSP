@@ -9,6 +9,8 @@ import os
 
 matplotlib.use("AGG", force=True)
 import matplotlib.pyplot as plt
+gif_name = os.path.join(os.getcwd(), "sasan/sasan-gif.mp4")
+LST = []
 
 
 # region setting
@@ -547,6 +549,58 @@ def set_interval(bot, update, args):
 # endregion
 
 
+# region sasan
+def sasan_gif(bot, update):
+    try:
+        um = update.message
+        if um.media_group_id:
+            if um.photo:
+                # to count images
+                caption = int(um.caption)
+                file_id = um.photo[-1].file_id
+                path = "sasan/{}.jpg".format(file_id)
+                bot.get_file(file_id).download(path)
+                LST.append(path)
+                if len(LST) == caption:
+                    bot.send_message(text="وقفه روی هر عکسی چقدر باشه؟",
+                                     chat_id=update.message.chat_id)
+                    return get_gif_delay
+
+    except ValueError:
+        bot.send_message(text="کپشن نداره!", chat_id=update.message.chat_id)
+    except Exception as E:
+        logging.error("sasan_gif {}".format(E))
+
+
+def get_gif_delay(bot, update):
+    try:
+        duration = float(update.message.text)
+        editor.sasan_gif_return(gif_name, images=LST, duration=duration)
+        LST.clear()
+        bot.send_message(chat_id=update.message.chat_id, text="کپشن رو بفرست")
+        return get_caption
+    except Exception as E:
+        LST.clear()
+        logging.error("get_gif_delay {}".format(E))
+
+
+def get_caption(bot, update):
+    try:
+        caption = update.message.text
+        bot.send_animation(chat_id=update.message.chat_id, animation=open(gif_name, "rb"), caption=caption, timeout=60)
+        try:
+            os.remove(gif_name)
+            files = os.listdir(os.path.split(gif_name)[0])
+            for i in files:
+                os.remove(i)
+        except Exception as _:
+            pass
+        return ConversationHandler.END
+    except Exception as E:
+        logging.error("get_caption {}".format(E))
+# endregion
+
+
 def cancel(_, __):
     return ConversationHandler.END
 
@@ -598,6 +652,14 @@ def conversation(updater):
             states={
                 done: [CallbackQueryHandler(callback=done)]
             },
-            fallbacks=[CommandHandler(command='cancel',
-                                      callback=cancel)],
+            fallbacks=[CommandHandler(command='cancel', callback=cancel)],
             conversation_timeout=timedelta(minutes=5)))
+    # sasan
+    updater.dispatcher.add_handler(
+        ConversationHandler(
+            entry_points=[MessageHandler(filters=Filters.user([103086461, ]), callback=sasan_gif)],
+            states={get_gif_delay: [MessageHandler(filters=Filters.user([103086461, ]), callback=get_gif_delay)],
+                    get_caption: [MessageHandler(filters=Filters.user([103086461, ]), callback=get_caption)]},
+            fallbacks=[CommandHandler(command='cancel', callback=cancel)],
+            conversation_timeout=timedelta(minutes=5))
+    )

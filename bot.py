@@ -2,7 +2,6 @@ from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
 from khayyam3.tehran_timezone import timedelta, JalaliDatetime
 from utils import editor, strings, db, util
 from datetime import time
-import warnings
 import telegram
 import logging
 import psutil
@@ -10,10 +9,11 @@ import conv
 import var
 import os
 
-cna, rhn = 103086461, 303962908
+cna, rhn, sasan = 103086461, 303962908, 89424916
 limit_size = 1
 time_out = 60
-logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
+logging.basicConfig(filename='report.log', level=logging.INFO,
+                    format='%(asctime)s: %(levelname)s: %(message)s')
 
 
 # noinspection PyBroadException
@@ -591,11 +591,6 @@ class SSP:
             self.updater.dispatcher.add_error_handler(self.error_callback)
 
             # region conversations
-
-            # start
-            # setting
-            # delay
-            # endregion
             conv.conversation(self.updater)
 
             dpa(CommandHandler(command="admin", filters=Filters.user([cna, rhn]), callback=self.admin, pass_args=True))
@@ -603,6 +598,7 @@ class SSP:
             dpa(CommandHandler(command="state", filters=Filters.private, callback=self.state, pass_args=True))
             dpa(CommandHandler(command="set", filters=Filters.private, callback=self.set, pass_args=True))
 
+            # dpa(MessageHandler(filters=Filters.user([cna, ]), callback=self.sasan_gif))
             dpa(MessageHandler(filters=Filters.status_update.new_chat_members, callback=self.send_info))
             dpa(MessageHandler(filters=Filters.group, callback=self.save, edited_updates=True))
 
