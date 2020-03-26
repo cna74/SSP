@@ -4,7 +4,6 @@ import multiprocessing
 from PIL import Image
 import warnings
 import logging
-import imageio
 import re
 import os
 

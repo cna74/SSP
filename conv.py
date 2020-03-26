@@ -9,12 +9,12 @@ import os
 
 matplotlib.use("AGG", force=True)
 import matplotlib.pyplot as plt
-gif_name = os.path.join(os.getcwd(), "sasan/sasan-gif.mp4")
+
 LST = []
 
 
 # region setting
-def status(bot, update):
+def status(update, content):
     try:
         um = update.message
         admin = um.from_user.id
@@ -26,25 +26,25 @@ def status(bot, update):
                 message_id = um.message_id
 
                 text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
-                bot.send_message(chat_id=chat_id,
-                                 text=text,
-                                 reply_to_message_id=message_id,
-                                 reply_markup=keyboard)
+                content.bot.send_message(chat_id=chat_id,
+                                         text=text,
+                                         reply_to_message_id=message_id,
+                                         reply_markup=keyboard)
                 return select
 
             elif isinstance(channels, list):
                 keyboard = InlineKeyboardMarkup(
                     [[Inline(i.name, callback_data="_;{}".format(i.name))] for i in channels])
-                bot.send_message(chat_id=admin,
-                                 text="شما صاحب چندین کانال هستید\nمایل به مشاهده تنظیمات کدام یک هستید؟",
-                                 reply_markup=keyboard)
+                content.bot.send_message(chat_id=admin,
+                                         text="شما صاحب چندین کانال هستید\nمایل به مشاهده تنظیمات کدام یک هستید؟",
+                                         reply_markup=keyboard)
                 return setting
 
     except Exception as E:
         logging.error("status {}".format(E))
 
 
-def setting(bot, update):
+def setting(update, content):
     try:
         if update.callback_query:
             data = update.callback_query.data
@@ -56,20 +56,20 @@ def setting(bot, update):
             chat_id = update.callback_query.message.chat_id
             message_id = update.callback_query.message.message_id
             text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
-            bot.edit_message_text(chat_id=chat_id, text=text, message_id=message_id, reply_markup=keyboard)
+            content.bot.edit_message_text(chat_id=chat_id, text=text, message_id=message_id, reply_markup=keyboard)
             return select
         else:
             um = update.message
             admin = um.from_user
             channel = db.find('channel', admin=admin)
             text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
-            bot.send_message(chat_id=admin.id, text=text, reply_markup=keyboard)
+            content.bot.send_message(chat_id=admin.id, text=text, reply_markup=keyboard)
             return select
     except Exception as E:
         logging.error("setting {}".format(E))
 
 
-def select(bot, update):
+def select(update, content):
     try:
         um = update.callback_query
         data = um.data
@@ -81,23 +81,23 @@ def select(bot, update):
             for i in range(5, 60, 5):
                 keyboard.append(
                     [Inline("{}M".format(str(i).zfill(2)), callback_data="{}m;{}".format(str(i).zfill(2), data[1]))])
-            for i in range(0, 24):
+            for i in range(1, 25):
                 keyboard.append(
                     [Inline("{}H".format(str(i).zfill(2)), callback_data='{}h;{}'.format(str(i).zfill(2), data[1]))])
             keyboard = np.array(keyboard).reshape((-1, 6)).tolist()
             keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data='setting;{}'.format(data[1]))])
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text="گام اول:\n"
-                                       "زمانبدی مورد نظر خود را انتخاب کنید\n تنها درصورتی که مایل "
-                                       "به تغییر دقایق به صورت دلخواه هستید "
-                                       "برای مثال:\n"
-                                       "13m -> برابر با هر 13 دقیقه\n"
-                                       "از این روش استفاده کنید:\n"
-                                       "/delay 13m @name-e-channel"
-                                       "\n اگر دچار مشکلی شده اید از ما کمک بگیرید\n"
-                                       "@s_for_cna",
-                                  reply_markup=InlineKeyboardMarkup(keyboard))
+            content.bot.edit_message_text(chat_id=chat_id,
+                                          message_id=message_id,
+                                          text="گام اول:\n"
+                                               "زمانبدی مورد نظر خود را انتخاب کنید\n تنها درصورتی که مایل "
+                                               "به تغییر دقایق به صورت دلخواه هستید "
+                                               "برای مثال:\n"
+                                               "13m -> برابر با هر 13 دقیقه\n"
+                                               "از این روش استفاده کنید:\n"
+                                               "/delay 13m @name-e-channel"
+                                               "\n اگر دچار مشکلی شده اید از ما کمک بگیرید\n"
+                                               "@Cna74",
+                                          reply_markup=InlineKeyboardMarkup(keyboard))
             return step2
         elif data[0] == 'wake':
             keyboard = []
@@ -107,10 +107,10 @@ def select(bot, update):
             keyboard = np.array(keyboard).reshape((6, -1)).tolist()
             keyboard.append([Inline('off', callback_data="offw;{}".format(data[1]))])
             keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data='setting;{}'.format(data[1]))])
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text="بات از چه ساعتی شروع به کار کند؟",
-                                  reply_markup=InlineKeyboardMarkup(keyboard))
+            content.bot.edit_message_text(chat_id=chat_id,
+                                          message_id=message_id,
+                                          text="بات از چه ساعتی شروع به کار کند؟",
+                                          reply_markup=InlineKeyboardMarkup(keyboard))
             return done
         elif data[0] == 'bed':
             keyboard = []
@@ -120,41 +120,42 @@ def select(bot, update):
             keyboard = np.array(keyboard).reshape((6, -1)).tolist()
             keyboard.append([Inline('off', callback_data="offw;{}".format(data[1]))])
             keyboard.append([Inline('بازگشت به منوی تنظیمات', callback_data='setting;{}'.format(data[1]))])
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text="بات در چه ساعتی خاموش شود؟",
-                                  reply_markup=InlineKeyboardMarkup(keyboard))
+            content.bot.edit_message_text(chat_id=chat_id,
+                                          message_id=message_id,
+                                          text="بات در چه ساعتی خاموش شود؟",
+                                          reply_markup=InlineKeyboardMarkup(keyboard))
             return done
         elif data[0] == 'graph':
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text="نمودار در چه بازه زمانی باشد؟",
-                                  reply_markup=InlineKeyboardMarkup(
-                                      [[Inline('یک هفته', callback_data="1w;{}".format(data[1])),
-                                        Inline('یک ماه', callback_data="1m;{}".format(data[1])),
-                                        Inline('یک سال', callback_data="1y;{}".format(data[1]))]]
-                                  ))
+            content.bot.edit_message_text(chat_id=chat_id,
+                                          message_id=message_id,
+                                          text="نمودار در چه بازه زمانی باشد؟",
+                                          reply_markup=InlineKeyboardMarkup(
+                                              [[Inline('یک هفته', callback_data="1w;{}".format(data[1])),
+                                                Inline('یک ماه', callback_data="1m;{}".format(data[1])),
+                                                Inline('یک سال', callback_data="1y;{}".format(data[1]))]]
+                                          ))
             return graph
         elif data[0] == 'logo':
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text="یک عکس با فرمت png بدون پس زمینه برام بفرست در ابعاد مربع\n"
-                                       "اگر نمیتونی یا بلد نیستی اینکار رو بکنی"
-                                       " میتونم از اسم کانال به عنوان لوگو استفاده کنم",
-                                  reply_markup=InlineKeyboardMarkup(
-                                      [[Inline('استفاده از نام کانال', callback_data="name;{}".format(data[1]))]]))
+            content.bot.edit_message_text(chat_id=chat_id,
+                                          message_id=message_id,
+                                          text="یک عکس با فرمت png بدون پس زمینه برام بفرست در ابعاد مربع\n"
+                                               "اگر نمیتونی یا بلد نیستی اینکار رو بکنی"
+                                               " میتونم از اسم کانال به عنوان لوگو استفاده کنم",
+                                          reply_markup=InlineKeyboardMarkup(
+                                              [[Inline('استفاده از نام کانال',
+                                                       callback_data="name;{}".format(data[1]))]]))
             return set_logo
         elif data[0] == 'up':
             channel = db.find('channel', name=data[1])
-            bot.edit_message_text(chat_id=chat_id,
-                                  message_id=message_id,
-                                  text=strings.status_upgrade(channel))
+            content.bot.edit_message_text(chat_id=chat_id,
+                                          message_id=message_id,
+                                          text=strings.status_upgrade(channel))
             return ConversationHandler.END
     except Exception as E:
         logging.error("select {}".format(E))
 
 
-def step2(bot, update):
+def step2(update, content):
     if update.callback_query:
         um = update.callback_query
         data = um.data.split(';')
@@ -166,74 +167,78 @@ def step2(bot, update):
         if interval.endswith('m'):
             interval = int(interval[:-1])
             if 1 <= interval <= 30:
-                bot.edit_message_text(chat_id=um.message.chat_id,
-                                      message_id=um.message.message_id,
-                                      text="گام دوم:\n"
-                                           "1️⃣ پیام ها هر {0} دقیقه ارسال شوند. برای مثال بصورت 01:{0}, "
-                                           "01:{1} و ...\n"
-                                           "2️⃣ پیام ها وقتی دقیقه شمار برابر {0} است ارسال شوند برای مثال "
-                                           "01:{0}, 02:{0}, 03:{0} و ...\n"
-                                           "کدام یک مورد پسند شماست؟\n"
-                                           "از ما کمک بگیرید:\n"
-                                           "@s_for_cna".format(str(interval).zfill(2),
-                                                               str(interval * 2).zfill(2)),
-                                      reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('حالت  1️⃣', callback_data='{}mr;{}'.format(interval, ch_name)),
-                                            Inline('حالت  2️⃣', callback_data='{}mf;{}'.format(interval, ch_name))],
-                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
-                                      )
+                content.bot.edit_message_text(chat_id=um.message.chat_id,
+                                              message_id=um.message.message_id,
+                                              text="گام دوم:\n"
+                                                   "1️⃣ پیام ها هر {0} دقیقه ارسال شوند. برای مثال بصورت 01:{0}, "
+                                                   "01:{1} و ...\n"
+                                                   "2️⃣ پیام ها وقتی دقیقه شمار برابر {0} است ارسال شوند برای مثال "
+                                                   "01:{0}, 02:{0}, 03:{0} و ...\n"
+                                                   "کدام یک مورد پسند شماست؟\n"
+                                                   "از ما کمک بگیرید:\n"
+                                                   "@s_for_cna".format(str(interval).zfill(2),
+                                                                       str(interval * 2).zfill(2)),
+                                              reply_markup=InlineKeyboardMarkup(
+                                                  [[Inline('حالت  1️⃣',
+                                                           callback_data='{}mr;{}'.format(interval, ch_name)),
+                                                    Inline('حالت  2️⃣',
+                                                           callback_data='{}mf;{}'.format(interval, ch_name))],
+                                                   [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
+                                              )
             else:
-                bot.edit_message_text(chat_id=um.message.chat_id,
-                                      message_id=um.message.message_id,
-                                      text="گام دوم:\n"
-                                           "پیام ها در ساعاتی مانند 01:{0}, 02:{0} ارسال میشوند\n"
-                                           "از ما کمک بگیرید:\n"
-                                           "@s_for_cna".format(str(interval).zfill(2)),
-                                      reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
-                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
-                                      )
+                content.bot.edit_message_text(chat_id=um.message.chat_id,
+                                              message_id=um.message.message_id,
+                                              text="گام دوم:\n"
+                                                   "پیام ها در ساعاتی مانند 01:{0}, 02:{0} ارسال میشوند\n"
+                                                   "از ما کمک بگیرید:\n"
+                                                   "@s_for_cna".format(str(interval).zfill(2)),
+                                              reply_markup=InlineKeyboardMarkup(
+                                                  [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
+                                                   [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
+                                              )
 
             return done
         elif interval.endswith('h'):
             interval = int(interval[:-1])
-            if 1 <= interval < 13:
-                bot.edit_message_text(chat_id=um.message.chat_id,
-                                      message_id=um.message.message_id,
-                                      text="گام دوم:\n"
-                                           "1️⃣ پیام ها هر {0} ساعت ارسال شوند. برای مثال بصورت {0}:00, "
-                                           " {1}:00 و ... "
-                                           "2️⃣ پیام ها هر روز راس ساعت {0}:00 ارسال شوند"
-                                           "کدام یک مورد پسند شماست؟\n"
-                                           "از ما کمک بگیرید:\n"
-                                           "@s_for_cna".format(str(interval).zfill(2),
-                                                               str(interval * 2).zfill(2)),
-                                      reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('حالت  1️⃣', callback_data='{}hr;{}'.format(interval, ch_name)),
-                                            Inline('حالت  2️⃣', callback_data='{}hf;{}'.format(interval, ch_name))],
-                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
-                                      )
+            if 1 <= interval <= 12:
+                content.bot.edit_message_text(chat_id=um.message.chat_id,
+                                              message_id=um.message.message_id,
+                                              text="گام دوم:\n"
+                                                   "1️⃣ پیام ها هر {0} ساعت ارسال شوند. برای مثال بصورت {0}:00, "
+                                                   " {1}:00 و ... "
+                                                   "2️⃣ پیام ها هر روز راس ساعت {0}:00 ارسال شوند"
+                                                   "کدام یک مورد پسند شماست؟\n"
+                                                   "از ما کمک بگیرید:\n"
+                                                   "@s_for_cna".format(str(interval).zfill(2),
+                                                                       str(interval * 2).zfill(2)),
+                                              reply_markup=InlineKeyboardMarkup(
+                                                  [[Inline('حالت  1️⃣',
+                                                           callback_data='{}hr;{}'.format(interval, ch_name)),
+                                                    Inline('حالت  2️⃣',
+                                                           callback_data='{}hf;{}'.format(interval, ch_name))],
+                                                   [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
+                                              )
             else:
-                bot.edit_message_text(chat_id=um.message.chat_id,
-                                      message_id=um.message.message_id,
-                                      text="گام دوم:\n"
-                                           "پیام ها هر روز راس ساعت {0}:00 ارسال شوند"
-                                           "کدام یک مورد پسند شماست؟\n"
-                                           "از ما کمک بگیرید:\n"
-                                           "@s_for_cna".format(str(interval).zfill(2)),
-                                      reply_markup=InlineKeyboardMarkup(
-                                          [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
-                                           [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
-                                      )
+                content.bot.edit_message_text(chat_id=um.message.chat_id,
+                                              message_id=um.message.message_id,
+                                              text="گام دوم:\n"
+                                                   "پیام ها هر روز راس ساعت {0}:00 ارسال شوند"
+                                                   "کدام یک مورد پسند شماست؟\n"
+                                                   "از ما کمک بگیرید:\n"
+                                                   "@s_for_cna".format(str(interval).zfill(2)),
+                                              reply_markup=InlineKeyboardMarkup(
+                                                  [[Inline('تایید', callback_data='{}mr;{}'.format(interval, ch_name))],
+                                                   [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]])
+                                              )
             return done
         elif interval == "setting":
             channel = db.find("channel", name=ch_name)
             text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
-            bot.edit_message_text(chat_id=admin, text=text, message_id=message_id, reply_markup=keyboard)
+            content.bot.edit_message_text(chat_id=admin, text=text, message_id=message_id, reply_markup=keyboard)
             return select
 
 
-def done(bot, update):
+def done(update, content):
     try:
         if update.callback_query:
             um = update.callback_query
@@ -264,14 +269,14 @@ def done(bot, update):
                 db.update(channel)
 
             text, keyboard = strings.status(channel=channel, remain=util.remain(channel=channel))
-            bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=keyboard)
+            content.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, reply_markup=keyboard)
             return select
 
     except Exception as E:
         logging.error("done {}".format(E))
 
 
-def graph(bot, update):
+def graph(update, content):
     try:
         if update.callback_query:
             um = update.callback_query
@@ -289,12 +294,12 @@ def graph(bot, update):
 
             y = out[:, 0]
             if len(out) < 3:
-                bot.edit_message_text(chat_id=admin,
-                                      message_id=um.message.message_id,
-                                      text="حداقل باید سه روز از ثبت نام گذشته باشد")
+                content.bot.edit_message_text(chat_id=admin,
+                                              message_id=um.message.message_id,
+                                              text="حداقل باید سه روز از ثبت نام گذشته باشد")
                 return ConversationHandler.END
 
-            y = np.append(y, bot.get_chat_members_count(ch_name))
+            y = np.append(y, content.bot.get_chat_members_count(ch_name))
             x = np.arange(len(y), dtype=int)
 
             plt.plot(x, y, marker='o', label='now', color='red', markersize=4)
@@ -319,21 +324,21 @@ def graph(bot, update):
             now = JalaliDatetime().from_date(now)
             til = now + timedelta(days=days)
 
-            bot.send_photo(chat_id=um.message.chat_id,
-                           photo=open(save_in, 'rb'),
-                           caption="از {} تا {} در {} روز\n" \
-                                   " کمترین میزان تعداد اعضا 🔻 {}\n" \
-                                   " بیشترین تعداد اعضا🔺 {}\n" \
-                                   " میانگین سرعت عضو شدن اعضا در روز {}\n" \
-                                   "پیش بینی برای {} روز آینده برابر {}".format(
-                               days, til, now, y.min(), y.max(), diff, prediction, domain))
+            content.bot.send_photo(chat_id=um.message.chat_id,
+                                   photo=open(save_in, 'rb'),
+                                   caption="از {} تا {} در {} روز\n" \
+                                           " کمترین میزان تعداد اعضا 🔻 {}\n" \
+                                           " بیشترین تعداد اعضا🔺 {}\n" \
+                                           " میانگین سرعت عضو شدن اعضا در روز {}\n" \
+                                           "پیش بینی برای {} روز آینده برابر {}".format(
+                                       days, til, now, y.min(), y.max(), diff, prediction, domain))
             os.remove(save_in)
             return ConversationHandler.END
     except Exception as E:
         logging.error("graph {}".format(E))
 
 
-def set_logo(bot, update):
+def set_logo(update, content):
     try:
         if update.callback_query:
             um = update.callback_query
@@ -344,11 +349,11 @@ def set_logo(bot, update):
             channel.logo = False
 
             text, keyboard = strings.set_logo_ok(channel=channel)
-            bot.send_photo(chat_id=chat_id,
-                           reply_to_message_id=um.message.message_id,
-                           photo=open('info.png', 'rb'),
-                           caption=text,
-                           reply_markup=keyboard)
+            content.bot.send_photo(chat_id=chat_id,
+                                   reply_to_message_id=um.message.message_id,
+                                   photo=open('info.png', 'rb'),
+                                   caption=text,
+                                   reply_markup=keyboard)
             return set_pos
 
         elif update.message.sticker:
@@ -366,33 +371,33 @@ def set_logo(bot, update):
                 res = db.find('channel', admin=chat_id)
             if isinstance(res, db.Channel) and mime.startswith('image') and size < (8 * 1025 * 1024):
                 channel = res
-                bot.get_file(file_id=file_id).download('logo/{}.png'.format(channel.name))
+                content.bot.get_file(file_id=file_id).download('logo/{}.png'.format(channel.name))
                 channel.logo = True
                 db.update(channel)
 
                 text, keyboard = strings.set_logo_ok(channel=channel)
-                bot.send_photo(chat_id=chat_id,
-                               reply_to_message_id=um.message_id,
-                               photo=open('info.png', 'rb'),
-                               caption=text,
-                               reply_markup=keyboard)
+                content.bot.send_photo(chat_id=chat_id,
+                                       reply_to_message_id=um.message_id,
+                                       photo=open('info.png', 'rb'),
+                                       caption=text,
+                                       reply_markup=keyboard)
                 return set_pos
 
             elif isinstance(res, list):
-                bot.send_message(chat_id=chat_id,
-                                 reply_to_message_id=um.message_id,
-                                 text=strings.set_logo_fail)
+                content.bot.send_message(chat_id=chat_id,
+                                         reply_to_message_id=um.message_id,
+                                         text=strings.set_logo_fail)
                 return set_logo
             else:
-                bot.send_message(chat_id=chat_id,
-                                 reply_to_message_id=um.message_id,
-                                 text=strings.set_logo_else)
+                content.bot.send_message(chat_id=chat_id,
+                                         reply_to_message_id=um.message_id,
+                                         text=strings.set_logo_else)
                 return set_logo
     except Exception as E:
         logging.error("set_logo {}".format(E))
 
 
-def set_pos(bot, update):
+def set_pos(update, content):
     try:
         um = update.callback_query
         admin = um.message.chat_id
@@ -401,12 +406,12 @@ def set_pos(bot, update):
         channel = db.find("channel", admin=admin, name=name)
         channel.pos = int(pos)
         db.update(channel)
-        bot.send_message(chat_id=admin,
-                         reply_to_message_id=um.message.message_id,
-                         text="تغییرات اعمال شد",
-                         reply_markup=InlineKeyboardMarkup(
-                             [[Inline('وضعیت', callback_data='{};{}'.format(admin, name))]]
-                         ))
+        content.bot.send_message(chat_id=admin,
+                                 reply_to_message_id=um.message.message_id,
+                                 text="تغییرات اعمال شد",
+                                 reply_markup=InlineKeyboardMarkup(
+                                     [[Inline('وضعیت', callback_data='{};{}'.format(admin, name))]]
+                                 ))
         return setting
     except Exception as E:
         logging.error("set_pos {}".format(E))
@@ -416,56 +421,56 @@ def set_pos(bot, update):
 
 
 # region start
-def start(bot, update):
+def start(update, content):
     try:
         chat_id = update.message.chat_id
         message_id = update.message.message_id
 
-        bot.send_message(chat_id=chat_id,
-                         text=strings.start_1,
-                         reply_to_message_id=message_id)
+        content.bot.send_message(chat_id=chat_id,
+                                 text=strings.start_1,
+                                 reply_to_message_id=message_id)
 
-        bot.send_message(chat_id=chat_id,
-                         text=strings.start_2,
-                         reply_markup=InlineKeyboardMarkup(
-                             [[Inline('خرید', callback_data="buy")],
-                              [Inline('تست (رایگان)', callback_data="test")],
-                              [Inline('راهنما', callback_data="guide")]]
-                         ))
+        content.bot.send_message(chat_id=chat_id,
+                                 text=strings.start_2,
+                                 reply_markup=InlineKeyboardMarkup(
+                                     [[Inline('خرید', callback_data="buy")],
+                                      [Inline('تست (رایگان)', callback_data="test")],
+                                      [Inline('راهنما', callback_data="guide")]]
+                                 ))
         return start_select
     except Exception as E:
         logging.error("start {}".format(E))
 
 
-def start_select(bot, update):
+def start_select(update, content):
     um = update.callback_query
     message_id = um.message.message_id
     data = um.data
     chat_id = um.message.chat_id
 
     if data == "buy":
-        bot.send_photo(chat_id=chat_id,
-                       photo=open("./table.jpg", "rb"),
-                       reply_to_message_id=message_id,
-                       caption=strings.start_buy)
+        content.bot.send_photo(chat_id=chat_id,
+                               photo=open("./table.jpg", "rb"),
+                               reply_to_message_id=message_id,
+                               caption=strings.start_buy)
         return start_register
     elif data == "test":
-        bot.edit_message_text(chat_id=chat_id,
-                              message_id=message_id,
-                              text=strings.start_select_test)
+        content.bot.edit_message_text(chat_id=chat_id,
+                                      message_id=message_id,
+                                      text=strings.start_select_test)
         return start_register
     elif data == "guide":
-        bot.edit_message_text(chat_id=chat_id,
-                              message_id=message_id,
-                              text=strings.start_select_guide,
-                              reply_markup=InlineKeyboardMarkup(
-                                  [[Inline('خرید', callback_data='buy')],
-                                   [Inline('تست (رایگان)', callback_data='test')]]
-                              ))
+        content.bot.edit_message_text(chat_id=chat_id,
+                                      message_id=message_id,
+                                      text=strings.start_select_guide,
+                                      reply_markup=InlineKeyboardMarkup(
+                                          [[Inline('خرید', callback_data='buy')],
+                                           [Inline('تست (رایگان)', callback_data='test')]]
+                                      ))
     return start_select
 
 
-def start_register(bot, update):
+def start_register(update, content):
     try:
         um = update.message
         message_id = um.message_id
@@ -482,12 +487,13 @@ def start_register(bot, update):
 
             channel = db.Channel(name=name, admin=admin, group_id=int(group_id), plan=1, expire=timedelta(days=7))
             db.add(channel)
-            bot.send_message(chat_id=chat_id, text="user {} registered\n\n{}".format(user, channel.__str__()))
-            bot.send_message(chat_id=chat_id, text=strings.start_test_register_true, reply_to_message_id=message_id)
+            content.bot.send_message(chat_id=chat_id, text="user {} registered\n\n{}".format(user, channel.__str__()))
+            content.bot.send_message(chat_id=chat_id, text=strings.start_test_register_true,
+                                     reply_to_message_id=message_id)
 
             return ConversationHandler.END
         else:
-            bot.send_message(chat_id=chat_id, text=strings.start_test_register_false)
+            content.bot.send_message(chat_id=chat_id, text=strings.start_test_register_false)
 
             return start_register
     except Exception as E:
@@ -498,20 +504,20 @@ def start_register(bot, update):
 
 
 # region interval
-def set_interval(bot, update, args):
+def set_interval(update, content):
     try:
         um = update.message
         admin = um.from_user
-        if args:
-            if len(args) == 2:
-                interval = args[0]
-                ch_name = args[1]
+        if content.args:
+            if len(content.args) == 2:
+                interval = content.args[0]
+                ch_name = content.args[1]
                 channel = db.find('channel', name=ch_name, admin=admin.id)
                 if channel:
                     if interval.endswith('m') and interval[:-1].isdigit():
                         interval = int(interval[:-1])
                         if 1 < interval <= 30:
-                            bot.send_message(
+                            content.bot.send_message(
                                 chat_id=um.chat_id,
                                 reply_to_message_id=um.message_id,
                                 text="گام دوم:\n"
@@ -530,7 +536,7 @@ def set_interval(bot, update, args):
                                       Inline('حالت  2️⃣', callback_data='{}mf;{}'.format(interval, ch_name))],
                                      [Inline('لغو، بازگشت', callback_data='_;{}'.format(ch_name))]]))
                         else:
-                            bot.send_message(
+                            content.bot.send_message(
                                 chat_id=um.chat_id,
                                 reply_to_message_id=um.message_id,
                                 text="گام دوم:\n"
@@ -544,61 +550,6 @@ def set_interval(bot, update, args):
 
     except Exception as E:
         logging.error("set_interval: {}".format(E))
-
-
-# endregion
-
-
-# region sasan
-def sasan_gif(bot, update):
-    try:
-        um = update.message
-        if um.media_group_id:
-            if um.photo:
-                # to count images
-                caption = int(um.caption)
-                file_id = um.photo[-1].file_id
-                path = "sasan/{}.jpg".format(file_id)
-                bot.get_file(file_id).download(path)
-                LST.append(path)
-                if len(LST) == caption:
-                    bot.send_message(text="وقفه روی هر عکسی چقدر باشه؟",
-                                     chat_id=update.message.chat_id)
-                    return get_gif_delay
-    except ValueError:
-        bot.send_message(text="کپشن نداره!", chat_id=update.message.chat_id)
-    except Exception as E:
-        logging.error("sasan_gif {}".format(E))
-
-
-def get_gif_delay(bot, update):
-    try:
-        duration = float(update.message.text)
-        editor.sasan_gif_return(gif_name, images=LST, duration=duration)
-        LST.clear()
-        bot.send_message(chat_id=update.message.chat_id, text="کپشن رو بفرست")
-        return get_caption
-    except Exception as E:
-        LST.clear()
-        logging.error("get_gif_delay {}".format(E))
-
-
-def get_caption(bot, update):
-    try:
-        caption = update.message.text
-        bot.send_animation(chat_id=update.message.chat_id, animation=open(gif_name, "rb"), caption=caption, timeout=60)
-        try:
-            os.remove(gif_name)
-            fl = os.path.split(gif_name)[0]
-            files = os.listdir(fl)
-            for i in files:
-                os.remove(os.path.join(fl, i))
-        except Exception as E:
-            logging.error("get_caption {}".format(E))
-        return ConversationHandler.END
-    except Exception as E:
-        logging.error("get_caption {}".format(E))
-# endregion
 
 
 def cancel(_, __):
@@ -620,7 +571,7 @@ def conversation(updater):
             },
             fallbacks=[CommandHandler(command='cancel',
                                       callback=cancel)],
-            conversation_timeout=timedelta(minutes=5)))
+            conversation_timeout=timedelta(minutes=1)))
 
     # setting
     updater.dispatcher.add_handler(
@@ -640,7 +591,7 @@ def conversation(updater):
             },
             fallbacks=[CommandHandler(command='cancel',
                                       callback=cancel)],
-            conversation_timeout=timedelta(minutes=5)))
+            conversation_timeout=timedelta(minutes=1)))
 
     # delay
     updater.dispatcher.add_handler(
@@ -653,13 +604,4 @@ def conversation(updater):
                 done: [CallbackQueryHandler(callback=done)]
             },
             fallbacks=[CommandHandler(command='cancel', callback=cancel)],
-            conversation_timeout=timedelta(minutes=5)))
-    # sasan
-    updater.dispatcher.add_handler(
-        ConversationHandler(
-            entry_points=[MessageHandler(filters=Filters.photo & Filters.user([103086461, 89424916]), callback=sasan_gif)],
-            states={get_gif_delay: [MessageHandler(filters=Filters.user([103086461, 89424916]), callback=get_gif_delay)],
-                    get_caption: [MessageHandler(filters=Filters.user([103086461, 89424916]), callback=get_caption)]},
-            fallbacks=[CommandHandler(command='cancel', callback=cancel)],
-            conversation_timeout=timedelta(minutes=5))
-    )
+            conversation_timeout=timedelta(minutes=1)))

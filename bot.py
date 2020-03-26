@@ -1,4 +1,4 @@
-from telegram.ext import Updater, MessageHandler, CommandHandler, Filters
+from telegram.ext import Updater, MessageHandler, CommandHandler, Filters, PicklePersistence
 from khayyam3.tehran_timezone import timedelta, JalaliDatetime
 from utils import editor, strings, db, util
 from datetime import time
@@ -9,9 +9,10 @@ import conv
 import var
 import os
 
-cna, rhn, sasan = 103086461, 303962908, 89424916
+cna, rhn = 103086461, 303962908
 limit_size = 1
 time_out = 60
+persistence = PicklePersistence("file")
 logging.basicConfig(filename='report.log', level=logging.INFO,
                     format='%(asctime)s: %(levelname)s: %(message)s')
 
@@ -19,8 +20,9 @@ logging.basicConfig(filename='report.log', level=logging.INFO,
 # noinspection PyBroadException
 class SSP:
     def __init__(self, token):
-        self.robot = telegram.Bot(token)
-        self.updater = Updater(token)
+        self.updater = Updater(token, use_context=True, persistence=persistence)
+        # self.robot = telegram.Bot(token)
+        # self.updater = Updater(token)
         try:
             for folder in ['vid', 'plot', 'logo', 'image', 'gif']:
                 dir_ = os.path.join(os.getcwd(), folder)
@@ -29,7 +31,7 @@ class SSP:
         except Exception as _:
             pass
 
-    def save(self, _, update):
+    def save(self, update, content):
         try:
             um = update.message
             ue = update.edited_message
@@ -256,7 +258,7 @@ class SSP:
     def add_member(self, channel):
         try:
             current_date = JalaliDatetime().now().to_date()
-            num = self.robot.get_chat_members_count(channel.name)
+            num = self.updater.bot.get_chat_members_count(channel.name)
             member = db.Member(number=num, channel_name=channel.name, calendar=current_date)
             db.add(member)
         except Exception as E:
@@ -282,7 +284,7 @@ class SSP:
                     msg.ch_a = True
                     new_message.append(msg)
 
-                self.robot.send_media_group(chat_id=chat_id, media=media, timeout=time_out)
+                self.updater.bot.send_media_group(chat_id=chat_id, media=media, timeout=time_out)
                 for msg in new_message:
                     db.update(msg)
                 logging.info('media_group sent {}'.format(message.__str__()))
@@ -297,16 +299,16 @@ class SSP:
                     out = "image/{}_out.jpg".format(channel.name)
                     if channel.plan >= 1:
                         try:
-                            self.robot.getFile(message.file_id).download(dir_)
+                            self.updater.bot.getFile(message.file_id).download(dir_)
                             txt = editor.image_watermark(photo=dir_, out=out, caption=message.txt, channel=channel)
-                            self.robot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
-                                                  caption=txt, timeout=time_out)
+                            self.updater.bot.send_photo(chat_id=message.to_channel, photo=open(out, 'rb'),
+                                                        caption=txt, timeout=time_out)
                         except Exception:
                             txt = editor.id_remove(text=message.txt, channel=channel)
-                            self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id, caption=txt)
+                            self.updater.bot.send_photo(chat_id=message.to_channel, photo=message.file_id, caption=txt)
                     else:
                         txt = editor.id_remove(message.txt, channel)
-                        self.robot.send_photo(chat_id=message.to_channel, photo=message.file_id, caption=txt)
+                        self.updater.bot.send_photo(chat_id=message.to_channel, photo=message.file_id, caption=txt)
 
                 elif message.kind == 'video':
                     form = message.mime
@@ -314,18 +316,18 @@ class SSP:
                     out = "vid/{}_out.mp4".format(channel.name)
 
                     if message.size <= limit_size and channel.plan >= 3:
-                        self.robot.getFile(message.file_id).download(dir_, timeout=20)
+                        self.updater.bot.getFile(message.file_id).download(dir_, timeout=20)
                         try:
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
 
-                            self.robot.send_video(chat_id=message.to_channel, video=open(out, 'rb'),
-                                                  caption=txt, timeout=time_out)
+                            self.updater.bot.send_video(chat_id=message.to_channel, video=open(out, 'rb'),
+                                                        caption=txt, timeout=time_out)
                         except Exception:
-                            self.robot.send_video(chat_id=message.to_channel, video=message.file_id, caption=txt)
+                            self.updater.bot.send_video(chat_id=message.to_channel, video=message.file_id, caption=txt)
                     else:
                         txt = editor.id_remove(text=message.txt, channel=channel)
-                        self.robot.send_video(chat_id=message.to_channel, video=message.file_id, caption=txt)
+                        self.updater.bot.send_video(chat_id=message.to_channel, video=message.file_id, caption=txt)
 
                 elif message.kind == 'animation':
                     form = message.mime
@@ -334,36 +336,37 @@ class SSP:
 
                     if message.size <= limit_size and channel.plan >= 2:
                         try:
-                            self.robot.getFile(message.file_id).download(dir_, timeout=20)
+                            self.updater.bot.getFile(message.file_id).download(dir_, timeout=20)
                             txt = editor.vid_watermark(vid=dir_, out=out, kind=message.kind,
                                                        caption=message.txt, channel=channel)
 
-                            self.robot.send_animation(chat_id=message.to_channel, animation=open(out, 'rb'),
-                                                      caption=txt, timeout=time_out)
+                            self.updater.bot.send_animation(chat_id=message.to_channel, animation=open(out, 'rb'),
+                                                            caption=txt, timeout=time_out)
                         except Exception as _:
-                            self.robot.send_animation(chat_id=message.to_channel, animation=message.file_id,
-                                                      caption=txt)
+                            self.updater.bot.send_animation(chat_id=message.to_channel, animation=message.file_id,
+                                                            caption=txt)
                     else:
                         txt = editor.id_remove(text=message.txt, channel=channel)
-                        self.robot.send_animation(chat_id=message.to_channel, animation=message.file_id, caption=txt)
+                        self.updater.bot.send_animation(chat_id=message.to_channel, animation=message.file_id,
+                                                        caption=txt)
 
                 elif message.kind == 'text':
-                    self.robot.send_message(chat_id=message.to_channel, text=txt, parse_mode=parse_mode)
+                    self.updater.bot.send_message(chat_id=message.to_channel, text=txt, parse_mode=parse_mode)
 
                 elif message.kind == 'audio':
-                    self.robot.send_audio(chat_id=message.to_channel, audio=message.file_id, caption=txt)
+                    self.updater.bot.send_audio(chat_id=message.to_channel, audio=message.file_id, caption=txt)
 
                 elif message.kind == 'document':
-                    self.robot.send_document(chat_id=message.to_channel, document=message.file_id, caption=txt)
+                    self.updater.bot.send_document(chat_id=message.to_channel, document=message.file_id, caption=txt)
 
                 elif message.kind == 'v_note':
-                    self.robot.send_video_note(chat_id=message.to_channel, video_note=message.file_id)
+                    self.updater.bot.send_video_note(chat_id=message.to_channel, video_note=message.file_id)
 
                 elif message.kind == 'voice':
-                    self.robot.send_voice(chat_id=message.to_channel, voice=message.file_id, caption=txt)
+                    self.updater.bot.send_voice(chat_id=message.to_channel, voice=message.file_id, caption=txt)
 
                 elif message.kind == 'sticker':
-                    self.robot.send_sticker(chat_id=message.to_channel, sticker=message.file_id, caption=txt)
+                    self.updater.bot.send_sticker(chat_id=message.to_channel, sticker=message.file_id, caption=txt)
 
                 try:
                     if dir_ or out:
@@ -389,70 +392,70 @@ class SSP:
             else:
                 logging.error('send_to_ch attempt {} Error: not a message'.format(message.__str__()))
 
-    def send_info(self, _, update):
+    def send_info(self, update, content):
         try:
             um = update.message
             if isinstance(um.new_chat_members, list):
                 chat_member = um.new_chat_members[0]
                 channel = db.find('channel', group_id=um.chat_id)
 
-                if chat_member.id == self.robot.id:
+                if chat_member.id == content.bot.id:
                     if um.chat.type == 'supergroup' and isinstance(channel, db.Channel):
-                        self.robot.send_message(chat_id=um.chat_id, text=strings.congrats)
+                        content.bot.send_message(chat_id=um.chat_id, text=strings.congrats)
                     else:
-                        self.robot.send_message(chat_id=um.chat_id, text=um.chat_id)
-                        self.robot.leave_chat(um.chat_id)
+                        content.bot.send_message(chat_id=um.chat_id, text=um.chat_id)
+                        content.bot.leave_chat(um.chat_id)
         except Exception as E:
             logging.error("send_info: {}".format(E))
 
-    def admin(self, _, update, args):
+    def admin(self, update, content):
         try:
             chat_id = update.message.chat_id
             message_id = update.message.message_id
             command = group_id = admin = channel_name = plan = expire = None
-            if args:
-                self.robot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING)
-                command = args[0]
+            if content.args:
+                self.updater.bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING)
+                command = content.args[0]
                 if command == "add":
-                    group_id, admin, channel_name, plan, expire = args[1:]
+                    group_id, admin, channel_name, plan, expire = content.args[1:]
                     if not db.find('channel', name=channel_name):
                         channel = db.Channel(name=channel_name, admin=int(admin),
                                              group_id=int(group_id), plan=int(plan), expire=timedelta(days=int(expire)))
                         db.add(channel)
-                        self.robot.send_message(chat_id=chat_id,
-                                                reply_to_message_id=message_id,
-                                                text="ثبت شد \n\n{}".format(channel.__str__()))
+                        self.updater.bot.send_message(chat_id=chat_id,
+                                                      reply_to_message_id=message_id,
+                                                      text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "ren":
-                    channel_name, expire = args[1:]
+                    channel_name, expire = content.args[1:]
                     if db.find("channel", name=channel_name):
                         channel = db.find("channel", name=channel_name)
                         channel.expire += timedelta(days=int(expire))
                         db.update(channel)
-                        self.robot.send_message(chat_id=chat_id,
-                                                reply_to_message_id=message_id,
-                                                text="ثبت شد \n\n{}".format(channel.__str__()))
+                        self.updater.bot.send_message(chat_id=chat_id,
+                                                      reply_to_message_id=message_id,
+                                                      text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "plan":
-                    channel_name, plan = args[1:]
+                    channel_name, plan = content.args[1:]
                     channel = db.find("channel", name=channel_name)
                     channel.plan = int(plan)
                     db.update(channel)
-                    self.robot.send_message(chat_id=chat_id,
-                                            reply_to_message_id=message_id,
-                                            text="ثبت شد \n\n{}".format(channel.__str__()))
+                    self.updater.bot.send_message(chat_id=chat_id,
+                                                  reply_to_message_id=message_id,
+                                                  text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "del":
-                    channel_name = args[1]
+                    channel_name = content.args[1]
                     channel = db.find("channel", name=channel_name)
                     if channel:
                         db.delete(channel)
                 elif command == "edit":
-                    channel_name, n_channel_name = args[1:]
+                    channel_name, n_channel_name = content.args[1:]
                     channel = db.find("channel", name=channel_name)
                     if channel:
                         channel.name = n_channel_name
                         db.update(channel)
-                        self.robot.send_message(chat_id=chat_id,
-                                                reply_to_message_id=message_id,
-                                                text="ثبت شد \n\n{}".format(channel.__str__()))
+                        self.updater.bot.send_message(chat_id=chat_id,
+                                                      reply_to_message_id=message_id,
+                                                      text="ثبت شد \n\n{}".format(channel.__str__()))
                 elif command == "lst":
                     channels = db.find('channel')
                     text = "channel          expire_date\n"
@@ -465,79 +468,79 @@ class SSP:
                         else:
                             text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
-                    self.robot.send_message(chat_id=cna, text=text)
+                    self.updater.bot.send_message(chat_id=cna, text=text)
                 elif command == "det":
-                    channel_name, = args[1:]
+                    channel_name, = content.args[1:]
                     channel = db.find("channel", name=channel_name)
                     if isinstance(channel, db.Channel):
-                        self.robot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
-                                                text=strings.status(channel, util.remain(channel), button=False))
+                        self.updater.bot.send_message(chat_id=chat_id, reply_to_message_id=message_id,
+                                                      text=strings.status(channel, util.remain(channel), button=False))
                 elif command == "db":
                     # db
-                    self.robot.send_document(chat_id=cna, document=open("bot_db.db", "rb"),
-                                             timeout=time_out)
+                    self.updater.bot.send_document(chat_id=cna, document=open("bot_db.db", "rb"),
+                                                   timeout=time_out)
                 else:
-                    self.robot.send_message(chat_id=chat_id,
-                                            reply_to_message_id=message_id,
-                                            text="command {} not found".format(args[0]))
+                    self.updater.bot.send_message(chat_id=chat_id,
+                                                  reply_to_message_id=message_id,
+                                                  text="command {} not found".format(content.args[0]))
 
             else:
-                self.robot.send_message(chat_id=chat_id,
-                                        text=strings.admin_hint)
+                self.updater.bot.send_message(chat_id=chat_id,
+                                              text=strings.admin_hint)
         except Exception as E:
             logging.error("admin: {}".format(E))
 
-    def state(self, _, update, args):
+    def state(self, update, content):
         try:
             admin = update.message.chat_id
 
-            if not args:
+            if not content.args:
                 channel = db.find("channel", admin=admin)
             else:
-                name = args[0]
+                name = content.args[0]
                 channel = db.find("channel", admin=admin, name=name)
 
             if isinstance(channel, db.Channel):
                 text = strings.status(channel, util.remain(channel=channel), button=False)
-                self.robot.send_message(chat_id=admin, text=text,
-                                        reply_to_message_id=update.message.message_id)
+                self.updater.bot.send_message(chat_id=admin, text=text,
+                                              reply_to_message_id=update.message.message_id)
                 logging.info("state : {}".format(channel.name))
 
             elif isinstance(channel, list):
-                self.robot.send_message(chat_id=admin,
-                                        text="شما صاحب چندین نسخه از بات هستید لطفا نام کانال خود را نیز وارد کنید"
-                                             "مثال:\n"
-                                             "/state @channel",
-                                        reply_to_message_id=update.message.message_id)
+                self.updater.bot.send_message(chat_id=admin,
+                                              text="شما صاحب چندین نسخه از بات هستید لطفا نام کانال خود را نیز وارد کنید"
+                                                   "مثال:\n"
+                                                   "/state @channel",
+                                              reply_to_message_id=update.message.message_id)
 
         except Exception as E:
             logging.error("state : {}".format(E))
 
-    def set(self, _, update, args):
+    def set(self, update, content):
         try:
             admin = update.message.chat_id
             channel = None
 
-            if len(args) == 1:
+            if len(content.args) == 1:
                 channel = db.find("channel", admin=admin)
-            elif len(args) == 2:
-                name = args[1]
+            elif len(content.args) == 2:
+                name = content.args[1]
                 channel = db.find("channel", admin=admin, name=name)
 
             if isinstance(channel, db.Channel):
-                state = dict([("off", False), ("on", True)]).get(args[0].lower(), None)
+                state = dict([("off", False), ("on", True)]).get(content.args[0].lower(), None)
                 if state is not None:
                     channel.up = state
                     db.update(channel)
-                    self.robot.send_message(chat_id=update.message.chat_id, text=strings.up(state=state))
-                    logging.info("set: channel {} {}".format(channel.name, args[0]))
+                    self.updater.bot.send_message(chat_id=update.message.chat_id, text=strings.up(state=state))
+                    logging.info("set: channel {} {}".format(channel.name, content.args[0]))
 
             elif isinstance(channel, list):
-                self.robot.send_message(chat_id=admin,
-                                        text="شما صاحب چندین نسخه از بات هستید لطفا نام کانال خود را نیز وارد کنید"
-                                             "مثال:\n"
-                                             "/set off @channel",
-                                        reply_to_message_id=update.message.message_id)
+                self.updater.bot.send_message(chat_id=admin,
+                                              text="شما صاحب چندین نسخه از بات هستید لطفا نام کانال خود را نیز وارد کنید"
+                                                   "مثال:\n"
+                                                   "/set off @channel",
+                                              reply_to_message_id=update.message.message_id)
 
         except Exception as E:
             logging.error("set: {}".format(E))
@@ -545,17 +548,17 @@ class SSP:
     def error_callback(self, _, __, error):
         try:
             logging.error(error)
-            self.robot.send_message(chat_id=cna, text="Heyyy {}".format(JalaliDatetime().now().strftime("%x")))
+            self.updater.bot.send_message(chat_id=cna, text="Heyyy {}".format(JalaliDatetime().now().strftime("%x")))
         except BaseException as E:
             logging.error("TelegramError {}".format(E))
 
-    def task(self, _, __):
+    def task(self, update, content):
         try:
             now = JalaliDatetime().now()
             channels = db.find('channel')
 
             if now.minute == 0:
-                self.robot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
+                content.bot.send_message(chat_id=cna, text=str(psutil.virtual_memory()[2]))
 
             for channel in channels:
                 if util.time_is_in(now=now, channel=channel):
@@ -566,10 +569,10 @@ class SSP:
         except Exception as E:
             logging.error('Task {}'.format(E))
 
-    def mid_night(self, _, __):
+    def mid_night(self, update, content):
         now = JalaliDatetime().now()
         channels = db.find('channel')
-        self.robot.send_document(document=open('bot_db.db', 'rb'), caption=now.strftime("%x"), chat_id=cna)
+        content.bot.send_document(document=open('bot_db.db', 'rb'), caption=now.strftime("%x"), chat_id=cna)
 
         text = "channel           expire_date\n"
         for ch in channels:
@@ -581,7 +584,7 @@ class SSP:
             else:
                 text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
 
-        self.robot.send_message(chat_id=cna, text=text)
+        content.bot.send_message(chat_id=cna, text=text)
 
     def run(self):
         try:
@@ -590,15 +593,13 @@ class SSP:
             self.updater.start_polling()
             self.updater.dispatcher.add_error_handler(self.error_callback)
 
-            # region conversations
             conv.conversation(self.updater)
 
             dpa(CommandHandler(command="admin", filters=Filters.user([cna, rhn]), callback=self.admin, pass_args=True))
-
             dpa(CommandHandler(command="state", filters=Filters.private, callback=self.state, pass_args=True))
             dpa(CommandHandler(command="set", filters=Filters.private, callback=self.set, pass_args=True))
 
-            # dpa(MessageHandler(filters=Filters.user([cna, ]), callback=self.sasan_gif))
+            # to get group id
             dpa(MessageHandler(filters=Filters.status_update.new_chat_members, callback=self.send_info))
             dpa(MessageHandler(filters=Filters.group, callback=self.save, edited_updates=True))
 
@@ -606,10 +607,10 @@ class SSP:
             job.run_repeating(callback=self.task, interval=60, first=first)
             job.run_daily(callback=self.mid_night, time=time(hour=0, minute=0))
 
-            user_name = self.robot.name
+            user_name = self.updater.bot.name
             print("{}".format(user_name))
             logging.info("{} started".format(user_name))
-            self.robot.send_message(chat_id=cna, text="started")
+            self.updater.bot.send_message(chat_id=cna, text="started")
 
             self.updater.idle()
         except telegram.error.NetworkError as E:

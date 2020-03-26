@@ -2,11 +2,11 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton as Inline
 from khayyam3.tehran_timezone import JalaliDatetime
 import numpy as np
 
-admin = "\n➖   ➖   ➖   ➖   ➖   ➖   ➖   ➖\nAdmin: @S_for_Cna\nChannel: @Elite_Manager_ch"
+admin = "\n➖   ➖   ➖   ➖   ➖   ➖   ➖   ➖\nAdmin: @Cna74\nChannel: @Elite_Manager_ch"
 
 
 def status_upgrade(channel):
-    payment = dict({0: 5000, 1: 8000, 2: 11000, 3: 14000}).get(channel.plan)
+    payment = dict({0: 5000, 1: 10000, 2: 15000, 3: 20000}).get(channel.plan)
 
     return "برای تمدید مبلغ {} را به شماره حساب \n" \
            "`6037-9974-3866-3685`\n" \
