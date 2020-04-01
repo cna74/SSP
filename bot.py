@@ -552,7 +552,7 @@ class SSP:
         except BaseException as E:
             logging.error("TelegramError {}".format(E))
 
-    def task(self, update, content):
+    def task(self, content):
         try:
             now = JalaliDatetime().now()
             channels = db.find('channel')
@@ -568,23 +568,6 @@ class SSP:
 
         except Exception as E:
             logging.error('Task {}'.format(E))
-
-    def mid_night(self, update, content):
-        now = JalaliDatetime().now()
-        channels = db.find('channel')
-        content.bot.send_document(document=open('bot_db.db', 'rb'), caption=now.strftime("%x"), chat_id=cna)
-
-        text = "channel           expire_date\n"
-        for ch in channels:
-            expire = JalaliDatetime().from_date(ch.expire)
-            now = JalaliDatetime().now()
-            diff = expire - now
-            if diff.days < 7:
-                text += "{} {} 🔴\n\n".format(ch.name, expire.strftime("%A %d %B"))
-            else:
-                text += "{} {} ⚪️\n\n".format(ch.name, expire.strftime("%A %d %B"))
-
-        content.bot.send_message(chat_id=cna, text=text)
 
     def run(self):
         try:
@@ -605,7 +588,6 @@ class SSP:
 
             first = 60 - JalaliDatetime().now().second
             job.run_repeating(callback=self.task, interval=60, first=first)
-            job.run_daily(callback=self.mid_night, time=time(hour=0, minute=0))
 
             user_name = self.updater.bot.name
             print("{}".format(user_name))

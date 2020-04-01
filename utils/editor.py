@@ -8,7 +8,7 @@ import re
 import os
 
 warnings.simplefilter("ignore", category=Warning)
-mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/usr/bin/convert'})
+# mpy_conf.change_settings({'FFMPEG_BINARY': '/usr/bin/ffmpeg', 'ImageMagick': '/usr/bin/convert'})
 logging.basicConfig(filename='report.log', level=logging.INFO, format='%(asctime)s: %(levelname)s: %(message)s')
 
 
@@ -141,7 +141,7 @@ def vid_watermark(vid, out, kind, caption, channel) -> str:
                 .set_pos(pos.get(find))
 
         final = CompositeVideoClip([clip, logo])
-        final.write_videofile(filename=out, progress_bar=False, verbose=False, threads=multiprocessing.cpu_count())
+        final.write_videofile(filename=out, logger=None, verbose=False, threads=multiprocessing.cpu_count())
 
         if re.search(pattern, caption):
             caption = id_remove(re.sub(pattern, '', caption), channel)
@@ -150,12 +150,12 @@ def vid_watermark(vid, out, kind, caption, channel) -> str:
         return caption
 
     except Exception as E:
-        logging.error('gif_watermark {}'.format(E))
+        logging.error('vid_watermark {}'.format(E))
 
 
-def sasan_gif_return(f_name, images, duration):
-    try:
-        vid = concatenate_videoclips([ImageClip(i, duration=duration) for i in images])
-        vid.write_videofile(f_name, fps=.5, progress_bar=False, verbose=False, threads=multiprocessing.cpu_count())
-    except Exception as E:
-        logging.error("sasan_gif_return {}".format(E))
+# def sasan_gif_return(f_name, images, duration):
+#     try:
+#         vid = concatenate_videoclips([ImageClip(i, duration=duration) for i in images])
+#         vid.write_videofile(f_name, fps=.5, progress_bar=False, verbose=False, threads=multiprocessing.cpu_count())
+#     except Exception as E:
+#         logging.error("sasan_gif_return {}".format(E))
